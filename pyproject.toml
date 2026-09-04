@@ -1,0 +1,47 @@
+[project]
+name = "sync-sdk"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "VivekReddy10-08-2004", email = "vivek.bhimavarapu@maine.edu" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.116.0",
+    "uvicorn[standard]>=0.35.0",
+    "pydantic>=2.11.0",
+    "pydantic-settings>=2.10.0",
+
+    "sqlalchemy>=2.0.40",
+    "asyncpg>=0.30.0",
+    "alembic>=1.16.0",
+
+    "httpx>=0.28.0",
+
+    "structlog>=25.0.0",
+
+    "opentelemetry-api>=1.36.0",
+    "opentelemetry-sdk>=1.36.0",
+    "opentelemetry-instrumentation-fastapi>=0.57b0",
+    "opentelemetry-instrumentation-sqlalchemy>=0.57b0",
+
+    "python-dotenv>=1.1.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.0",
+    "pytest-asyncio>=1.1.0",
+    "pytest-cov>=6.2.0",
+    "ruff>=0.12.0",
+    "mypy>=1.17.0",
+    "testcontainers[postgres]>=4.12.0",
+]
+
+[project.scripts]
+sync-sdk = "sync_sdk:main"
+
+[build-system]
+requires = ["uv_build>=0.12.3,<0.13.0"]
+build-backend = "uv_build"
