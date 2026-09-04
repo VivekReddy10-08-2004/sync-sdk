@@ -12,21 +12,18 @@ dependencies = [
     "uvicorn[standard]>=0.35.0",
     "pydantic>=2.11.0",
     "pydantic-settings>=2.10.0",
-
     "sqlalchemy>=2.0.40",
     "asyncpg>=0.30.0",
     "alembic>=1.16.0",
-
     "httpx>=0.28.0",
-
     "structlog>=25.0.0",
-
     "opentelemetry-api>=1.36.0",
     "opentelemetry-sdk>=1.36.0",
     "opentelemetry-instrumentation-fastapi>=0.57b0",
     "opentelemetry-instrumentation-sqlalchemy>=0.57b0",
-
     "python-dotenv>=1.1.0",
+    "psycopg[binary]>=3.3.5",
+    "aiosqlite>=0.22.1",
 ]
 
 [dependency-groups]
@@ -45,3 +42,8 @@ sync-sdk = "sync_sdk:main"
 [build-system]
 requires = ["uv_build>=0.12.3,<0.13.0"]
 build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+asyncio_mode = "auto"

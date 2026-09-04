@@ -1,15 +1,13 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-""" DB engine configuration and settings. """
 
 class Settings(BaseSettings):
-    database_url: str = (
-        "postgresql+asyncpg://postgres:postgres@localhost:5432/offline_sync"
-    )
+    database_url: str = "sqlite+aiosqlite:///./sync_dev.db"
 
     model_config = SettingsConfigDict(
         env_file=".env",
         env_prefix="SYNC_",
+        extra="ignore",
     )
 
 
