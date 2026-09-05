@@ -8,7 +8,7 @@ when sending fails. It can also bring server changes back to the device.
 
 ## How it works
 
-![Alt text](Architecture Diagram.png)
+![Sync SDK architecture diagram](Architecture%20Diagram.png)
 
 1. Your app adds a change to a local queue, called the **outbox**.
 2. The SDK saves that change before returning to your app.
