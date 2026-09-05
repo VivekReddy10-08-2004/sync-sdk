@@ -6,6 +6,7 @@ from app.adapters.postgres import PostgresRemoteStore
 from app.api.dependencies import get_remote_store
 from app.db.models import Base
 from app.main import app
+from sync_sdk.adapters.sqlalchemy import initialize_sync_metadata
 
 
 @pytest_asyncio.fixture
@@ -14,6 +15,8 @@ async def client(tmp_path):
     sessions = async_sessionmaker(engine, expire_on_commit=False)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+    await initialize_sync_metadata(engine)
 
     previous = app.dependency_overrides.copy()
     app.dependency_overrides[get_remote_store] = lambda: PostgresRemoteStore(

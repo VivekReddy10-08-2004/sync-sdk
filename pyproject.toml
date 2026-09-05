@@ -1,33 +1,42 @@
 [project]
 name = "sync-sdk"
 version = "0.1.0"
-description = "Add your description here"
+description = "Embeddable synchronization pipelines with pluggable storage and transports"
 readme = "README.md"
 authors = [
     { name = "VivekReddy10-08-2004", email = "vivek.bhimavarapu@maine.edu" }
 ]
 requires-python = ">=3.12"
-dependencies = [
+dependencies = ["pydantic>=2.11.0"]
+
+[project.optional-dependencies]
+http = ["httpx>=0.28.0"]
+sqlalchemy = ["sqlalchemy[asyncio]>=2.0.40"]
+fastapi = ["fastapi>=0.116.0"]
+sqlite = ["sqlalchemy[asyncio]>=2.0.40", "aiosqlite>=0.22.1"]
+postgres = ["sqlalchemy[asyncio]>=2.0.40", "asyncpg>=0.30.0"]
+gateway = [
     "fastapi>=0.116.0",
     "uvicorn[standard]>=0.35.0",
-    "pydantic>=2.11.0",
     "pydantic-settings>=2.10.0",
-    "sqlalchemy>=2.0.40",
+    "sqlalchemy[asyncio]>=2.0.40",
     "asyncpg>=0.30.0",
     "alembic>=1.16.0",
     "httpx>=0.28.0",
-    "structlog>=25.0.0",
-    "opentelemetry-api>=1.36.0",
-    "opentelemetry-sdk>=1.36.0",
-    "opentelemetry-instrumentation-fastapi>=0.57b0",
-    "opentelemetry-instrumentation-sqlalchemy>=0.57b0",
-    "python-dotenv>=1.1.0",
     "psycopg[binary]>=3.3.5",
     "aiosqlite>=0.22.1",
 ]
 
 [dependency-groups]
 dev = [
+    "fastapi>=0.116.0",
+    "pydantic-settings>=2.10.0",
+    "sqlalchemy[asyncio]>=2.0.40",
+    "alembic>=1.16.0",
+    "httpx>=0.28.0",
+    "aiosqlite>=0.22.1",
+    "asyncpg>=0.30.0",
+    "psycopg[binary]>=3.3.5",
     "pytest>=8.4.0",
     "pytest-asyncio>=1.1.0",
     "pytest-cov>=6.2.0",

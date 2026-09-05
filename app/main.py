@@ -1,8 +1,7 @@
 from fastapi import FastAPI
 
-from app.api.changes import router as changes_router
-from app.api.mutations import router as mutations_router
-
+from app.api.dependencies import get_remote_store
+from sync_sdk.integrations.fastapi import create_sync_router
 
 app = FastAPI(
     title="Offline Sync Gateway",
@@ -11,8 +10,7 @@ app = FastAPI(
 )
 
 
-app.include_router(mutations_router)
-app.include_router(changes_router)
+app.include_router(create_sync_router(get_remote_store))
 
 
 @app.get("/")

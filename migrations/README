@@ -1,1 +1,15 @@
-Generic single-database configuration.
+Database updates for the sample app
+
+From the project folder, apply all pending updates:
+
+    uv run --extra gateway alembic upgrade head
+
+Check the current database version:
+
+    uv run --extra gateway alembic current
+
+Run updates before starting the sample server. The database connection comes from
+app/config.py and your SYNC_DATABASE_URL setting.
+
+These files update the sample app's database. Apps using the SDK can use their own
+database migration tool to manage their tables and the SDK tracking tables.

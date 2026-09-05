@@ -4,6 +4,8 @@ from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
+from sync_sdk.adapters.sqlalchemy import sync_metadata
+
 from app.db.models import Base
 from app.config import settings
 
@@ -18,7 +20,7 @@ config.set_main_option(
         "postgresql+psycopg",
     ),
 )
-target_metadata = Base.metadata
+target_metadata = [Base.metadata, sync_metadata]
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
