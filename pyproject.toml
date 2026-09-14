@@ -26,6 +26,13 @@ gateway = [
     "psycopg[binary]>=3.3.5",
     "aiosqlite>=0.22.1",
 ]
+observability = [
+    "opentelemetry-api>=1.38.0",
+    "opentelemetry-sdk>=1.38.0",
+    "opentelemetry-exporter-otlp-proto-http>=1.38.0",
+    "opentelemetry-instrumentation-fastapi>=0.59b0",
+    "opentelemetry-instrumentation-httpx>=0.59b0",
+]
 
 [dependency-groups]
 dev = [
@@ -37,6 +44,11 @@ dev = [
     "aiosqlite>=0.22.1",
     "asyncpg>=0.30.0",
     "psycopg[binary]>=3.3.5",
+    "opentelemetry-api>=1.38.0",
+    "opentelemetry-sdk>=1.38.0",
+    "opentelemetry-exporter-otlp-proto-http>=1.38.0",
+    "opentelemetry-instrumentation-fastapi>=0.59b0",
+    "opentelemetry-instrumentation-httpx>=0.59b0",
     "pytest>=8.4.0",
     "pytest-asyncio>=1.1.0",
     "pytest-cov>=6.2.0",

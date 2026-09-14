@@ -11,6 +11,7 @@ from .ports import (
 )
 from .registry import Entity, EntityRegistry
 from .store import SQLiteStore
+from .telemetry import NoOpTelemetry, PipelineTelemetry
 
 __all__ = [
     "Change",
@@ -23,6 +24,8 @@ __all__ = [
     "Mutation",
     "MutationRejected",
     "MutationResult",
+    "NoOpTelemetry",
+    "PipelineTelemetry",
     "RetryableError",
     "SQLiteStore",
     "SyncClient",

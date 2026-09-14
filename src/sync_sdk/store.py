@@ -82,6 +82,12 @@ class SQLiteStore:
         )
         return [Mutation.model_validate_json(row[0]) for row in rows]
 
+    def pending_count(self) -> int:
+        row = self.db.execute(
+            "SELECT COUNT(*) FROM outbox WHERE status='pending'"
+        ).fetchone()
+        return int(row[0])
+
     def results(self) -> list[MutationResult]:
         rows = self.db.execute(
             "SELECT result FROM outbox WHERE result IS NOT NULL ORDER BY position"

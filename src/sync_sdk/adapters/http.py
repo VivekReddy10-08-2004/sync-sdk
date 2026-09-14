@@ -39,14 +39,22 @@ class HTTPTransport:
             response.raise_for_status()
             return response
         except httpx.TransportError as exc:
-            raise RetryableError(str(exc)) from exc
+            raise RetryableError(str(exc), reason="connection") from exc
         except httpx.HTTPStatusError as exc:
             if (
                 exc.response.status_code in (408, 429)
                 or exc.response.status_code >= 500
             ):
+                if exc.response.status_code == 408:
+                    reason = "timeout"
+                elif exc.response.status_code == 429:
+                    reason = "rate_limit"
+                else:
+                    reason = "server"
                 raise RetryableError(
-                    str(exc), retry_after=self._retry_after(exc.response)
+                    str(exc),
+                    retry_after=self._retry_after(exc.response),
+                    reason=reason,
                 ) from exc
             raise
 

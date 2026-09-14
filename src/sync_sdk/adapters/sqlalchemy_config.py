@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
 from ..gateway import SyncGateway
 from ..registry import ConflictPolicy, Entity, EntityRegistry, optimistic_version
+from ..telemetry import PipelineTelemetry
 from .sqlalchemy import (
     SQLAlchemyStore,
     TableBinding,
@@ -94,11 +95,17 @@ class SQLAlchemyConfig:
             f"{name}Payload", __config__=ConfigDict(extra="forbid"), **definitions
         )
 
-    def build(self, session_factory: Callable[[], AsyncSession]) -> SyncGateway:
+    def build(
+        self,
+        session_factory: Callable[[], AsyncSession],
+        *,
+        telemetry: PipelineTelemetry | None = None,
+    ) -> SyncGateway:
         """Snapshot this configuration into an embeddable gateway."""
         return SyncGateway(
             SQLAlchemyStore(session_factory, self._bindings),
             EntityRegistry(self._entities.values()),
+            telemetry=telemetry,
         )
 
     async def create_tables(self, engine: AsyncEngine) -> None:

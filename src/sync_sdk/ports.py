@@ -18,9 +18,16 @@ class MutationRejected(Exception):
 class RetryableError(Exception):
     """A transport can be retried without changing mutation IDs."""
 
-    def __init__(self, message: str, *, retry_after: float = 0):
+    def __init__(
+        self,
+        message: str,
+        *,
+        retry_after: float = 0,
+        reason: str = "transient",
+    ):
         super().__init__(message)
         self.retry_after = retry_after
+        self.reason = reason
 
 
 class SyncTransport(Protocol):
@@ -44,6 +51,7 @@ class LocalStore(Protocol):
     def retry_state(self) -> tuple[int, float]: ...
     def enqueue(self, mutation: Mutation) -> None: ...
     def pending(self, limit: int) -> list[Mutation]: ...
+    def pending_count(self) -> int: ...
     def acknowledge(self, results: list[MutationResult]) -> None: ...
     def apply_page(self, page: ChangeBatch) -> None: ...
     def schedule_retry(self, attempts: int, retry_at: float) -> None: ...

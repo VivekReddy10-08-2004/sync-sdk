@@ -43,6 +43,9 @@ pip install '.[http,fastapi,postgres]'
 
 # HTTP, FastAPI, and SQLite support
 pip install '.[http,fastapi,sqlite]'
+
+# Add OpenTelemetry and SigNoz support
+pip install '.[http,fastapi,postgres,observability]'
 ```
 
 The base package needs Pydantic, which checks data types. The local SQLite queue
@@ -199,6 +202,37 @@ The next call continues the work.
 Received rows, deletes, and the saved position are written together. The local
 record view shows data received from the server. It does not show pending edits
 as if the server had already accepted them.
+
+## Monitor sync with OpenTelemetry and SigNoz
+
+Monitoring is optional. OpenTelemetry records queue size, retries, connection
+failures, mutation results, conflicts, failed writes, and sync time. SigNoz shows
+that data in charts and traces.
+
+Set up monitoring once when the client or server starts:
+
+```python
+from sync_sdk.adapters.opentelemetry import setup_signoz
+
+monitoring = setup_signoz("my-sync-service")
+```
+
+Then pass it into the pipeline:
+
+```python
+sync = SyncClient(local, transport=transport, telemetry=monitoring.telemetry)
+gateway = config.build(sessions, telemetry=monitoring.telemetry)
+```
+
+Set `OTEL_EXPORTER_OTLP_ENDPOINT` to your SigNoz collector address. SigNoz Cloud
+also needs `OTEL_EXPORTER_OTLP_HEADERS` with its key. Call
+`monitoring.shutdown()` when the process stops.
+
+Monitoring errors do not stop sync. Payloads, row IDs, mutation IDs, and client IDs
+are not used as metric labels.
+
+See [the OpenTelemetry and SigNoz guide](docs/observability.md) for client and
+server setup, metric names, traces, and useful alerts.
 
 ## What is included
 

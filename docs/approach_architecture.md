@@ -226,6 +226,26 @@ adapter to keep different users' data apart.
 `SyncClient(local, http)` still works. You can also pass `transport=` and use any
 store that follows `LocalStore`.
 
+## Monitoring
+
+Monitoring is optional. The client and gateway send data through
+`PipelineTelemetry`. With no monitoring object, the pipeline uses
+`NoOpTelemetry`, which does nothing.
+
+`SafeTelemetry` catches errors from the monitoring code. A SigNoz outage or a
+broken custom monitoring adapter does not stop sync.
+
+The OpenTelemetry adapter creates traces, counters, time records, and a queue-size
+gauge. It does not put payloads, row IDs, mutation IDs, client IDs, or error
+messages in metric labels. Entity names are used as labels, so keep the set of
+entity names small and fixed.
+
+The app owns the OpenTelemetry setup and shutdown. The client and server can each
+use their own service name. HTTPX and FastAPI tracing passes the same trace ID
+between them.
+
+See [the OpenTelemetry and SigNoz guide](observability.md).
+
 ## The sample app and its database update
 
 The `app/` folder registers `task` and uses its sample `Record` table. The old

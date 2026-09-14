@@ -1,7 +1,6 @@
 from datetime import datetime
 
 from sqlalchemy import (
-    BigInteger,
     DateTime,
     Integer,
     JSON,

@@ -14,6 +14,7 @@ from sync_sdk.adapters.sqlalchemy import SQLAlchemyStore
 from sync_sdk.gateway import SyncGateway
 from sync_sdk.models import Mutation
 from sync_sdk.registry import Entity, EntityRegistry
+from sync_sdk.telemetry import PipelineTelemetry
 
 
 class _ReferenceRecordBinding:
@@ -48,8 +49,14 @@ class _ReferenceRecordBinding:
 class PostgresRemoteStore(SyncGateway):
     """Legacy name retained; the reference app explicitly opts in to 'task'."""
 
-    def __init__(self, session_factory: Callable[[], AsyncSession] = SessionLocal):
+    def __init__(
+        self,
+        session_factory: Callable[[], AsyncSession] = SessionLocal,
+        *,
+        telemetry: PipelineTelemetry | None = None,
+    ):
         super().__init__(
             SQLAlchemyStore(session_factory, {"task": _ReferenceRecordBinding()}),
             EntityRegistry([Entity("task")]),
+            telemetry=telemetry,
         )
