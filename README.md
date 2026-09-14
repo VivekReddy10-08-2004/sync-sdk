@@ -6,6 +6,23 @@ Your app chooses the database, tables, fields, and access rules. This SDK saves
 changes on the device, sends them when a connection is available, and tries again
 when sending fails. It can also bring server changes back to the device.
 
+# Using Sync SDK in an existing application
+
+You need three pieces:
+
+SERVER
+1. Register the tables you want synced.
+2. Build a gateway.
+3. Mount the FastAPI routes.
+
+CLIENT
+4. Open a local SQLiteStore.
+5. Create a SyncClient pointed at the server.
+6. Call enqueue() whenever your app changes synced data.
+
+WORKER
+7. Run sync.run() while your app is active.
+
 ## How it works
 
 ![Sync SDK architecture diagram](Architecture%20Diagram.png)
