@@ -267,6 +267,8 @@ Tests cover repeated sends, competing writes, conflicts, failed groups of writes
 saved rejections, table creation, linked tables, direct calls, HTTP, and restarts.
 They also check that old database data still works after the update.
 
-Table creation SQL is checked for SQLite, PostgreSQL, and MySQL. Live PostgreSQL
-and MySQL tests, ready-to-use NoSQL adapters, automatic tracking of outside writes,
-and automatic sending of existing rows still need separate work.
+The SQL adapter contract runs on SQLite, PostgreSQL, and MySQL. The GitHub Actions
+job starts real PostgreSQL and MySQL servers. It checks repeated sends, competing
+writes, conflicts, pulls, deletes, health checks, and storage metrics. Ready-to-use
+NoSQL adapters, automatic tracking of outside writes, and automatic sending of
+existing rows still need separate work.

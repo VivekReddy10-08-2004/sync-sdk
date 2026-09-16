@@ -131,6 +131,11 @@ Metrics:
 | `sync.gateway.pull.duration` | Time used to read server changes |
 | `sync.gateway.pull.failures` | Failed server change reads |
 | `sync.gateway.changes.returned` | Changes returned to clients |
+| `sync.storage.transactions` | Database write groups |
+| `sync.storage.transaction.duration` | Database write-group time in milliseconds |
+| `sync.storage.pull.duration` | Database change-read time in milliseconds |
+| `sync.storage.health.duration` | Database health-check time in milliseconds |
+| `sync.storage.failures` | Failed database writes or reads |
 
 Main trace spans:
 
@@ -141,12 +146,14 @@ Main trace spans:
 | `sync.client.pull` | One page read from the server |
 | `sync.gateway.apply` | One group handled by the server |
 | `sync.gateway.pull` | One page read from the server change list |
+| `sync.storage.transaction` | One database write group |
 
 Mutation result events are added to `sync.gateway.apply` spans.
 
-Metric labels use the entity name, operation, result, sync result, and failure
-type where needed. They do not include payloads, row IDs, mutation IDs, client
-IDs, or error messages.
+Metric labels use the entity name, operation, result, sync result, failure type,
+and database type where needed. The database label is `db.system.name`, such as
+`sqlite`, `postgresql`, or `mysql`. Labels do not include payloads, row IDs,
+mutation IDs, client IDs, or error messages.
 
 Queue size is reported when a change is added and when sync runs. A stopped client
 cannot send a new queue size until it starts again.

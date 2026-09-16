@@ -25,7 +25,7 @@ WORKER
 
 ## How it works
 
-![Sync SDK architecture diagram](Architecture%20Diagram.png)
+![Sync SDK architecture diagram](https://raw.githubusercontent.com/VivekReddy10-08-2004/sync-sdk/master/Architecture%20Diagram.png)
 
 1. Your app adds a change to a local queue, called the **outbox**.
 2. The SDK saves that change before returning to your app.
@@ -48,28 +48,62 @@ uv run --extra sqlite python examples/pluggable_tasks.py
 The example creates a task table, sends one task through the pipeline, and prints
 the saved data. It uses temporary files and removes them when it finishes.
 
-See [the example code](examples/pluggable_tasks.py).
+See [the example code](https://github.com/VivekReddy10-08-2004/sync-sdk/blob/master/examples/pluggable_tasks.py).
 
 ## Choose what to install
 
-Install only the parts your app needs. From this project folder:
+Install only the parts your app needs:
 
 ```sh
 # HTTP, FastAPI, and PostgreSQL support
-pip install '.[http,fastapi,postgres]'
+pip install 'sync-sdk[http,fastapi,postgres]'
 
 # HTTP, FastAPI, and SQLite support
-pip install '.[http,fastapi,sqlite]'
+pip install 'sync-sdk[http,fastapi,sqlite]'
+
+# HTTP, FastAPI, and MySQL support
+pip install 'sync-sdk[http,fastapi,mysql]'
 
 # Add OpenTelemetry and SigNoz support
-pip install '.[http,fastapi,postgres,observability]'
+pip install 'sync-sdk[http,fastapi,postgres,observability]'
 ```
 
 The base package needs Pydantic, which checks data types. The local SQLite queue
 uses Python's built-in SQLite support.
 
-You supply the database connection. For MySQL, install the SQLAlchemy driver your
-app uses. The SDK does not choose your database or manage its login details.
+You supply the database connection. The SDK does not choose your database or
+manage its login details.
+
+## Test database adapters
+
+The normal test run checks the SQL adapter with SQLite:
+
+```sh
+uv run pytest tests/integration/test_sql_database_adapters.py -q
+```
+
+You can run the same test against PostgreSQL or MySQL. Use empty test databases.
+Their names must contain `test`. The test creates tables and removes them.
+
+```sh
+SYNC_TEST_POSTGRES_URL='postgresql+asyncpg://user:pass@localhost/sync_test' \
+uv run pytest tests/integration/test_sql_database_adapters.py -q
+
+SYNC_TEST_MYSQL_URL='mysql+asyncmy://user:pass@localhost/sync_test' \
+uv run pytest tests/integration/test_sql_database_adapters.py -q
+```
+
+Set both values to test both servers in one run.
+
+The full test method, verified database versions, measured times, package checks,
+limits, and release steps are in the
+[testing and verification report](https://github.com/VivekReddy10-08-2004/sync-sdk/blob/master/TESTING.md).
+This full link also works from the PyPI page.
+
+Set `SYNC_TEST_METRICS_PATH=database-adapter-metrics.json` to save transaction,
+pull, and health-check times for each database. The Database adapters GitHub
+Actions job starts real PostgreSQL and MySQL servers, runs this test, and saves
+the JSON and JUnit reports.
 
 ## Choose your tables and fields
 
@@ -112,7 +146,7 @@ also pass an existing model's table, such as `Task.__table__`.
 
 Run this inside your async app. `engine` is your SQLAlchemy database connection
 manager. `sessions` is your app's async session factory, which opens database
-sessions. The [example](examples/pluggable_tasks.py) shows how to create both.
+sessions. The [example](https://github.com/VivekReddy10-08-2004/sync-sdk/blob/master/examples/pluggable_tasks.py) shows how to create both.
 
 ```python
 await config.create_tables(engine)
@@ -248,8 +282,8 @@ also needs `OTEL_EXPORTER_OTLP_HEADERS` with its key. Call
 Monitoring errors do not stop sync. Payloads, row IDs, mutation IDs, and client IDs
 are not used as metric labels.
 
-See [the OpenTelemetry and SigNoz guide](docs/observability.md) for client and
-server setup, metric names, traces, and useful alerts.
+See the [OpenTelemetry and SigNoz guide](https://github.com/VivekReddy10-08-2004/sync-sdk/blob/master/docs/observability.md)
+for client and server setup, metric names, traces, and useful alerts.
 
 ## What is included
 
@@ -260,12 +294,11 @@ server setup, metric names, traces, and useful alerts.
 - FastAPI routes you can add to your app.
 - Rules that let developers write other storage and transport adapters.
 
-Tests use a real SQLite database. The SQL table definitions are also checked for
-PostgreSQL and MySQL, but live tests for those databases still need to be added.
-There is no ready-to-use MongoDB or other NoSQL adapter yet.
+Tests use real SQLite, PostgreSQL, and MySQL databases. The same storage contract
+runs on all three. There is no ready-to-use MongoDB or other NoSQL adapter yet.
 
-See [the setup and adapter guide](docs/approach_architecture.md) for keys made from
-several columns, linked tables, custom types, and rules for writing adapters.
+See the [setup and adapter guide](https://github.com/VivekReddy10-08-2004/sync-sdk/blob/master/docs/approach_architecture.md)
+for keys made from several columns, linked tables, custom types, and adapter rules.
 
 ## What your app still handles
 

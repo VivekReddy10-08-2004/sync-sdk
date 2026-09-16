@@ -1,0 +1,83 @@
+name: Database adapters
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-sql:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: sync
+          POSTGRES_PASSWORD: sync
+          POSTGRES_DB: sync_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sync -d sync_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: sync_test
+          MYSQL_USER: sync
+          MYSQL_PASSWORD: sync
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.1.0
+        with:
+          version: "0.12.13"
+          enable-cache: true
+
+      - name: Install test dependencies
+        run: uv sync --locked --group dev --extra postgres --extra mysql
+
+      - name: Test adapters and collect metrics
+        env:
+          SYNC_TEST_POSTGRES_URL: postgresql+asyncpg://sync:sync@127.0.0.1:5432/sync_test
+          SYNC_TEST_MYSQL_URL: mysql+asyncmy://sync:sync@127.0.0.1:3306/sync_test
+          SYNC_TEST_METRICS_PATH: database-adapter-metrics.json
+        run: >-
+          uv run pytest tests/integration/test_sql_database_adapters.py
+          -q -s --junitxml=database-adapter-tests.xml
+
+      - name: Show metric report
+        if: always()
+        run: |
+          if test -f database-adapter-metrics.json; then
+            {
+              echo '## Database adapter metrics'
+              echo '```json'
+              cat database-adapter-metrics.json
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Save test reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: database-adapter-reports
+          path: |
+            database-adapter-metrics.json
+            database-adapter-tests.xml
+          if-no-files-found: ignore

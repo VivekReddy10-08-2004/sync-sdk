@@ -9,12 +9,19 @@ authors = [
 requires-python = ">=3.12"
 dependencies = ["pydantic>=2.11.0"]
 
+[project.urls]
+Homepage = "https://github.com/VivekReddy10-08-2004/sync-sdk"
+Repository = "https://github.com/VivekReddy10-08-2004/sync-sdk"
+Issues = "https://github.com/VivekReddy10-08-2004/sync-sdk/issues"
+"Test report" = "https://github.com/VivekReddy10-08-2004/sync-sdk/blob/master/TESTING.md"
+
 [project.optional-dependencies]
 http = ["httpx>=0.28.0"]
 sqlalchemy = ["sqlalchemy[asyncio]>=2.0.40"]
 fastapi = ["fastapi>=0.116.0"]
 sqlite = ["sqlalchemy[asyncio]>=2.0.40", "aiosqlite>=0.22.1"]
 postgres = ["sqlalchemy[asyncio]>=2.0.40", "asyncpg>=0.30.0"]
+mysql = ["sqlalchemy[asyncio]>=2.0.40", "asyncmy>=0.2.10"]
 gateway = [
     "fastapi>=0.116.0",
     "uvicorn[standard]>=0.35.0",
@@ -24,6 +31,7 @@ gateway = [
     "alembic>=1.16.0",
     "httpx>=0.28.0",
     "psycopg[binary]>=3.3.5",
+    "asyncmy>=0.2.10",
     "aiosqlite>=0.22.1",
 ]
 observability = [
@@ -63,6 +71,16 @@ sync-sdk = "sync_sdk:main"
 [build-system]
 requires = ["uv_build>=0.12.3,<0.13.0"]
 build-backend = "uv_build"
+
+[tool.uv.build-backend]
+source-include = [
+    "TESTING.md",
+    "docs/**",
+    "tests/**",
+    "examples/**",
+    'Architecture\ Diagram.png',
+    ".github/workflows/database-adapters.yml",
+]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

@@ -56,7 +56,11 @@ class PostgresRemoteStore(SyncGateway):
         telemetry: PipelineTelemetry | None = None,
     ):
         super().__init__(
-            SQLAlchemyStore(session_factory, {"task": _ReferenceRecordBinding()}),
+            SQLAlchemyStore(
+                session_factory,
+                {"task": _ReferenceRecordBinding()},
+                telemetry=telemetry,
+            ),
             EntityRegistry([Entity("task")]),
             telemetry=telemetry,
         )

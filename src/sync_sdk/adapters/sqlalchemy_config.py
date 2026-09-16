@@ -103,7 +103,7 @@ class SQLAlchemyConfig:
     ) -> SyncGateway:
         """Snapshot this configuration into an embeddable gateway."""
         return SyncGateway(
-            SQLAlchemyStore(session_factory, self._bindings),
+            SQLAlchemyStore(session_factory, self._bindings, telemetry=telemetry),
             EntityRegistry(self._entities.values()),
             telemetry=telemetry,
         )

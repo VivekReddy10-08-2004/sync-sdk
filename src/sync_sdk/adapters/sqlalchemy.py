@@ -7,6 +7,7 @@ write throughput. Schema initialization is an explicit application/setup action.
 """
 
 import json
+import time
 from collections.abc import Callable, Mapping
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
@@ -34,6 +35,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
 from ..models import Change, ChangeBatch, Mutation, MutationResult
 from ..ports import MutationRejected
+from ..telemetry import PipelineTelemetry, safe_telemetry
 
 sync_metadata = MetaData()
 clock = Table(
@@ -232,50 +234,130 @@ class SQLAlchemyStore:
         self,
         session_factory: Callable[[], AsyncSession],
         bindings: Mapping[str, SQLAlchemyBinding],
+        *,
+        telemetry: PipelineTelemetry | None = None,
     ):
         self.session_factory, self.bindings = session_factory, dict(bindings)
+        self.telemetry = safe_telemetry(telemetry)
+
+    @staticmethod
+    def _metric_attributes(
+        backend: str, *, operation: str, outcome: str
+    ) -> dict[str, str]:
+        return {
+            "db.system.name": backend,
+            "sync.storage.operation": operation,
+            "sync.outcome": outcome,
+        }
 
     @asynccontextmanager
     async def transaction(self):
-        async with self.session_factory() as session, session.begin():
-            if session.get_bind().dialect.name == "sqlite":
-                await session.execute(text("BEGIN IMMEDIATE"))
-            sequence = await session.scalar(
-                select(clock.c.sequence).where(clock.c.id == 1).with_for_update()
-            )
-            if sequence is None:
-                raise RuntimeError("Sync metadata is not initialized")
-            yield _Transaction(session, self.bindings, sequence)
+        started = time.perf_counter()
+        async with self.session_factory() as session:
+            backend = session.get_bind().dialect.name
+            span_attributes = {"db.system.name": backend}
+            outcome = "ok"
+            with self.telemetry.span(
+                "sync.storage.transaction", span_attributes
+            ) as span:
+                try:
+                    async with session.begin():
+                        if backend == "sqlite":
+                            await session.execute(text("BEGIN IMMEDIATE"))
+                        sequence = await session.scalar(
+                            select(clock.c.sequence)
+                            .where(clock.c.id == 1)
+                            .with_for_update()
+                        )
+                        if sequence is None:
+                            raise RuntimeError("Sync metadata is not initialized")
+                        yield _Transaction(session, self.bindings, sequence)
+                except BaseException:
+                    outcome = "error"
+                    self.telemetry.count(
+                        "sync.storage.failures",
+                        attributes=self._metric_attributes(
+                            backend, operation="transaction", outcome=outcome
+                        ),
+                    )
+                    raise
+                finally:
+                    attributes = self._metric_attributes(
+                        backend, operation="transaction", outcome=outcome
+                    )
+                    self.telemetry.count(
+                        "sync.storage.transactions", attributes=attributes
+                    )
+                    self.telemetry.record(
+                        "sync.storage.transaction.duration",
+                        (time.perf_counter() - started) * 1000,
+                        attributes,
+                    )
+                    span.set_attribute("sync.outcome", outcome)
 
     async def get_changes(self, cursor: int, limit: int) -> ChangeBatch:
+        started = time.perf_counter()
         async with self.session_factory() as session:
-            rows = (
-                (
-                    await session.execute(
-                        select(changes)
-                        .where(changes.c.sequence > cursor)
-                        .order_by(changes.c.sequence)
-                        .limit(limit + 1)
+            backend = session.get_bind().dialect.name
+            outcome = "ok"
+            try:
+                rows = (
+                    (
+                        await session.execute(
+                            select(changes)
+                            .where(changes.c.sequence > cursor)
+                            .order_by(changes.c.sequence)
+                            .limit(limit + 1)
+                        )
                     )
+                    .mappings()
+                    .all()
                 )
-                .mappings()
-                .all()
-            )
-            batch = [Change.model_validate(dict(row)) for row in rows[:limit]]
-            return ChangeBatch(
-                cursor=batch[-1].sequence if batch else cursor,
-                has_more=len(rows) > limit,
-                changes=batch,
-            )
+                batch = [Change.model_validate(dict(row)) for row in rows[:limit]]
+                return ChangeBatch(
+                    cursor=batch[-1].sequence if batch else cursor,
+                    has_more=len(rows) > limit,
+                    changes=batch,
+                )
+            except BaseException:
+                outcome = "error"
+                self.telemetry.count(
+                    "sync.storage.failures",
+                    attributes=self._metric_attributes(
+                        backend, operation="pull", outcome=outcome
+                    ),
+                )
+                raise
+            finally:
+                self.telemetry.record(
+                    "sync.storage.pull.duration",
+                    (time.perf_counter() - started) * 1000,
+                    self._metric_attributes(backend, operation="pull", outcome=outcome),
+                )
 
     async def health_check(self) -> bool:
-        try:
-            async with self.session_factory() as session:
-                return (
+        started = time.perf_counter()
+        async with self.session_factory() as session:
+            backend = session.get_bind().dialect.name
+            outcome = "ok"
+            try:
+                healthy = (
                     await session.scalar(select(clock.c.id).where(clock.c.id == 1)) == 1
                 )
-        except (SQLAlchemyError, OSError):
-            return False
+                if not healthy:
+                    outcome = "error"
+                return healthy
+            except (SQLAlchemyError, OSError):
+                outcome = "error"
+                return False
+            finally:
+                self.telemetry.record(
+                    "sync.storage.health.duration",
+                    (time.perf_counter() - started) * 1000,
+                    self._metric_attributes(
+                        backend, operation="health", outcome=outcome
+                    ),
+                )
 
 
 class _Transaction:

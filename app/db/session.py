@@ -1,3 +1,5 @@
+from typing import Any
+
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -6,8 +8,7 @@ from sqlalchemy.ext.asyncio import (
 
 from app.config import settings
 
-
-engine_kwargs = {
+engine_kwargs: dict[str, Any] = {
     "echo": False,
 }
 
