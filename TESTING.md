@@ -3,7 +3,7 @@
 ## Release
 
 - Package: `sync-sdk`
-- Version: `0.1.0`
+- Version: `0.1.1`
 - Report date: September 15, 2026
 - Python used: 3.12.4
 
@@ -19,11 +19,11 @@ The normal test suite collected 54 tests.
 
 A clean source package and wheel were built:
 
-- `sync_sdk-0.1.0.tar.gz`
-- `sync_sdk-0.1.0-py3-none-any.whl`
+- `sync_sdk-0.1.1.tar.gz`
+- `sync_sdk-0.1.1-py3-none-any.whl`
 
 The wheel was installed into a new Python environment. Importing `sync_sdk`
-worked, and the installed version was `0.1.0`.
+worked, and the installed version was `0.1.1`.
 
 ## Databases tested
 
@@ -233,7 +233,7 @@ Create a clean environment and install the wheel:
 uv venv /tmp/sync-sdk-wheel-test --clear
 uv pip install \
   --python /tmp/sync-sdk-wheel-test/bin/python \
-  dist/sync_sdk-0.1.0-py3-none-any.whl
+  dist/sync_sdk-0.1.1-py3-none-any.whl
 /tmp/sync-sdk-wheel-test/bin/python -c \
   'import importlib.metadata as m; import sync_sdk; print(m.version("sync-sdk"))'
 ```
@@ -241,7 +241,7 @@ uv pip install \
 The last command should print:
 
 ```text
-0.1.0
+0.1.1
 ```
 
 ## What this proves

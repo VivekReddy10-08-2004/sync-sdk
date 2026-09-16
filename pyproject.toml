@@ -1,6 +1,6 @@
 [project]
 name = "sync-sdk"
-version = "0.1.0"
+version = "0.1.1"
 description = "Embeddable synchronization pipelines with pluggable storage and transports"
 readme = "README.md"
 authors = [
@@ -21,7 +21,7 @@ sqlalchemy = ["sqlalchemy[asyncio]>=2.0.40"]
 fastapi = ["fastapi>=0.116.0"]
 sqlite = ["sqlalchemy[asyncio]>=2.0.40", "aiosqlite>=0.22.1"]
 postgres = ["sqlalchemy[asyncio]>=2.0.40", "asyncpg>=0.30.0"]
-mysql = ["sqlalchemy[asyncio]>=2.0.40", "asyncmy>=0.2.10"]
+mysql = ["sqlalchemy[asyncio]>=2.0.40", "asyncmy>=0.2.10", "cryptography>=44.0.0"]
 gateway = [
     "fastapi>=0.116.0",
     "uvicorn[standard]>=0.35.0",
@@ -32,6 +32,7 @@ gateway = [
     "httpx>=0.28.0",
     "psycopg[binary]>=3.3.5",
     "asyncmy>=0.2.10",
+    "cryptography>=44.0.0",
     "aiosqlite>=0.22.1",
 ]
 observability = [
