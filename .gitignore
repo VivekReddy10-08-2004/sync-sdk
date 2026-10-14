@@ -9,3 +9,7 @@ wheels/
 # Virtual environments
 .venv
 #Envoirnment files
+
+#md files
+Next_Steps.md
+

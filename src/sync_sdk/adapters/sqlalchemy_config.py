@@ -11,6 +11,7 @@ from ..gateway import SyncGateway
 from ..registry import ConflictPolicy, Entity, EntityRegistry, optimistic_version
 from ..telemetry import PipelineTelemetry
 from .sqlalchemy import (
+    SQLAlchemyChangeCapture,
     SQLAlchemyStore,
     TableBinding,
     initialize_sync_metadata,
@@ -107,6 +108,21 @@ class SQLAlchemyConfig:
             EntityRegistry(self._entities.values()),
             telemetry=telemetry,
         )
+
+    def build_change_capture(
+        self, session_factory: Callable[[], AsyncSession]
+    ) -> SQLAlchemyChangeCapture:
+        """Build a polling worker for writes made outside the sync gateway."""
+        normalizers = {
+            name: (
+                lambda payload, schema=entity.schema: schema.model_validate(
+                    payload
+                ).model_dump(mode="json")
+            )
+            for name, entity in self._entities.items()
+            if entity.schema is not None
+        }
+        return SQLAlchemyChangeCapture(session_factory, self._bindings, normalizers)
 
     async def create_tables(self, engine: AsyncEngine) -> None:
         """Explicit setup: create registered business tables and sync metadata.
