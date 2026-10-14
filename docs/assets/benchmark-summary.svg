@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="310" viewBox="0 0 900 310" role="img" aria-labelledby="title description">
+  <title id="title">Preliminary SQLite throughput benchmark</title>
+  <desc id="description">At concurrency one, 1000 mutations applied at 53.03 per second with no failures. At concurrency eight, 300 applied at 51.11 per second and 700 failed because of SQLite locking.</desc>
+  <rect width="900" height="310" rx="14" fill="#ffffff"/>
+  <rect x="1" y="1" width="898" height="308" rx="13" fill="none" stroke="#d7dde8" stroke-width="2"/>
+
+  <text x="32" y="38" fill="#172033" font-family="Arial, sans-serif" font-size="20" font-weight="700">Preliminary SQLite benchmark</text>
+  <text x="32" y="61" fill="#596579" font-family="Arial, sans-serif" font-size="13">1,000 measured creates · batch size 100 · October 14, 2026</text>
+
+  <text x="32" y="98" fill="#172033" font-family="Arial, sans-serif" font-size="15" font-weight="700">Successful throughput</text>
+  <text x="32" y="121" fill="#596579" font-family="Arial, sans-serif" font-size="12">mutations per second</text>
+
+  <text x="32" y="158" fill="#172033" font-family="Arial, sans-serif" font-size="13">Concurrency 1</text>
+  <rect x="130" y="143" width="239" height="20" rx="4" fill="#2563eb"/>
+  <text x="377" y="158" fill="#172033" font-family="Arial, sans-serif" font-size="13" font-weight="700">53.03</text>
+
+  <text x="32" y="203" fill="#172033" font-family="Arial, sans-serif" font-size="13">Concurrency 8</text>
+  <rect x="130" y="188" width="230" height="20" rx="4" fill="#2563eb"/>
+  <text x="368" y="203" fill="#172033" font-family="Arial, sans-serif" font-size="13" font-weight="700">51.11</text>
+
+  <line x1="449" y1="87" x2="449" y2="239" stroke="#d7dde8"/>
+  <text x="480" y="98" fill="#172033" font-family="Arial, sans-serif" font-size="15" font-weight="700">Mutation outcome</text>
+  <text x="480" y="121" fill="#596579" font-family="Arial, sans-serif" font-size="12">applied and failed</text>
+
+  <text x="480" y="158" fill="#172033" font-family="Arial, sans-serif" font-size="13">Concurrency 1</text>
+  <rect x="578" y="143" width="270" height="20" rx="4" fill="#15803d"/>
+  <text x="713" y="158" fill="#ffffff" font-family="Arial, sans-serif" font-size="12" font-weight="700" text-anchor="middle">1,000 applied</text>
+
+  <text x="480" y="203" fill="#172033" font-family="Arial, sans-serif" font-size="13">Concurrency 8</text>
+  <path d="M582 188H659V208H582A4 4 0 0 1 578 204V192A4 4 0 0 1 582 188Z" fill="#15803d"/>
+  <path d="M659 188H844A4 4 0 0 1 848 192V204A4 4 0 0 1 844 208H659Z" fill="#dc2626"/>
+  <text x="618" y="203" fill="#ffffff" font-family="Arial, sans-serif" font-size="11" font-weight="700" text-anchor="middle">300</text>
+  <text x="753" y="203" fill="#ffffff" font-family="Arial, sans-serif" font-size="11" font-weight="700" text-anchor="middle">700 failed</text>
+
+  <circle cx="485" cy="236" r="5" fill="#15803d"/>
+  <text x="496" y="240" fill="#596579" font-family="Arial, sans-serif" font-size="12">Applied</text>
+  <circle cx="560" cy="236" r="5" fill="#dc2626"/>
+  <text x="571" y="240" fill="#596579" font-family="Arial, sans-serif" font-size="12">Failed: SQLite locking</text>
+
+  <rect x="32" y="261" width="816" height="30" rx="6" fill="#f3f6fa"/>
+  <text x="440" y="281" fill="#374151" font-family="Arial, sans-serif" font-size="13" text-anchor="middle">Correctness audit passed for all committed mutations · scaling remains unproven</text>
+</svg>

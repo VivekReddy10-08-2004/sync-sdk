@@ -81,6 +81,7 @@ source-include = [
     "TESTING.md",
     "docs/**",
     "tests/**",
+    "benchmarks/**",
     "examples/**",
     'Architecture\ Diagram.png',
     ".github/workflows/database-adapters.yml",

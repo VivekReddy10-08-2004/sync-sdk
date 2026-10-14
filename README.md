@@ -116,6 +116,23 @@ pull, and health-check times for each database. The Database adapters GitHub
 Actions workflow starts real PostgreSQL, MySQL, and MongoDB servers and saves its
 JSON and JUnit reports.
 
+## Benchmark gateway and storage throughput
+
+![Preliminary SQLite benchmark: concurrency 1 applied all 1,000 mutations at 53.03 per second; concurrency 8 applied 300 and failed 700 because of database locking](docs/assets/benchmark-summary.svg)
+
+The eight-writer run preserved correctness but exposed SQLite write contention;
+it is not evidence of high-throughput scaling. Reproduce the baseline and save
+its JSON report:
+
+```sh
+uv run --extra sqlite python benchmarks/sync_throughput.py \
+  --mutations 1000 --warmup 100 --batch-size 100 --concurrency 1 \
+  --fail-on-errors --output benchmark-sqlite.json
+```
+
+The [benchmark guide](docs/benchmarks.md) defines the metrics and scaling proof,
+and gives PostgreSQL and MySQL commands.
+
 ## Choose your tables and fields
 
 You can use new tables or tables your app already has. This example uses SQLAlchemy

@@ -60,6 +60,22 @@ jobs:
           uv run pytest tests/integration/test_sql_database_adapters.py
           -q -s --junitxml=database-adapter-tests.xml
 
+      - name: Benchmark PostgreSQL throughput
+        env:
+          SYNC_TEST_POSTGRES_URL: postgresql+asyncpg://sync:sync@127.0.0.1:5432/sync_test
+        run: |
+          set -euo pipefail
+          for concurrency in 1 2 4 8; do
+            uv run python benchmarks/sync_throughput.py \
+              --database-url "$SYNC_TEST_POSTGRES_URL" \
+              --mutations 1000 \
+              --warmup 100 \
+              --batch-size 100 \
+              --concurrency "$concurrency" \
+              --fail-on-errors \
+              --output "benchmark-postgresql-c${concurrency}.json"
+          done
+
       - name: Show metric report
         if: always()
         run: |
@@ -71,6 +87,16 @@ jobs:
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
           fi
+          for report in benchmark-postgresql-c*.json; do
+            if test -f "$report"; then
+              {
+                echo "## $report"
+                echo '```json'
+                cat "$report"
+                echo '```'
+              } >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
 
       - name: Save test reports
         if: always()
@@ -80,6 +106,7 @@ jobs:
           path: |
             database-adapter-metrics.json
             database-adapter-tests.xml
+            benchmark-postgresql-c*.json
           if-no-files-found: ignore
 
   live-mongodb:

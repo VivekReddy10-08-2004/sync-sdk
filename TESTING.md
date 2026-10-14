@@ -4,7 +4,7 @@
 
 - Package: `sync-sdk`
 - Version: `0.1.1`
-- Report date: October 13, 2026
+- Report date: October 14, 2026
 - Python used: 3.12.4
 
 This report states what was tested. It also states what is not included yet.
@@ -106,7 +106,9 @@ The SQL versions run and pass.
 | `tests/integration/test_sync_api.py` | FastAPI mutation and change routes |
 | `tests/integration/test_reliability.py` | Offline work, retries, restart, crash, and resume |
 | `tests/integration/test_sql_database_adapters.py` | Live SQLite, PostgreSQL, and MySQL contract |
+| `tests/integration/test_mongodb_adapter.py` | Live MongoDB adapter contract |
 | `tests/test_observability.py` | Metrics, traces, and monitoring failures |
+| `benchmarks/sync_throughput.py` | Repeatable SQL gateway and storage throughput workload |
 
 ## Run the normal tests
 
@@ -125,7 +127,7 @@ uv run pytest -q
 Expected result for this release:
 
 ```text
-52 passed, 2 skipped
+58 passed, 3 skipped
 ```
 
 ## Run the live database tests
@@ -185,6 +187,15 @@ Each database produced:
 
 Times change with the computer, database settings, connection distance, and load.
 
+## Throughput benchmark
+
+`benchmarks/sync_throughput.py` runs a configurable create workload, reports
+successful mutations per second and batch latency, and audits the stored rows and
+change feed afterward. The preliminary SQLite baseline and commands for SQLite,
+PostgreSQL, and MySQL are in the [throughput benchmark guide](docs/benchmarks.md).
+The measured database times above remain contract-test instrumentation and should
+not be compared as throughput results.
+
 ## OpenTelemetry and SigNoz checks
 
 The SQL adapter records these metrics:
@@ -212,13 +223,14 @@ See the [OpenTelemetry and SigNoz guide](docs/observability.md) for setup steps.
 
 The workflow at `.github/workflows/database-adapters.yml`:
 
-1. Starts PostgreSQL and MySQL.
+1. Starts PostgreSQL, MySQL, and MongoDB.
 2. Installs the locked project dependencies.
 3. Runs the live database contract.
-4. Creates a JSON timing report.
-5. Creates a JUnit test report.
-6. Adds the JSON report to the GitHub Actions summary.
-7. Saves both reports as a workflow artifact.
+4. Benchmarks PostgreSQL at concurrency 1, 2, 4, and 8.
+5. Creates JSON timing and benchmark reports.
+6. Creates a JUnit test report.
+7. Adds the JSON reports to the GitHub Actions summary.
+8. Saves the reports as a workflow artifact.
 
 The job runs for pull requests, pushes to `master`, and manual runs.
 
