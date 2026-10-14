@@ -6,10 +6,12 @@ cursor can never skip a late-committing change. This prioritizes correctness ove
 write throughput. Schema initialization is an explicit application/setup action.
 """
 
+import asyncio
 import json
 import time
 from collections.abc import Callable, Mapping
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, Protocol
 from uuid import UUID
@@ -69,6 +71,19 @@ changes = Table(
     Column("payload", JSON, nullable=False),
     Column("version", Integer, nullable=False),
     Column("created_at", DateTime(timezone=True), nullable=False),
+)
+capture_checkpoints = Table(
+    "sync_capture_checkpoints",
+    sync_metadata,
+    Column("entity", String(191), primary_key=True),
+    Column("scanned_at", DateTime(timezone=True), nullable=False),
+)
+captured_rows = Table(
+    "sync_captured_rows",
+    sync_metadata,
+    Column("entity", String(191), primary_key=True),
+    Column("entity_id", String(191), primary_key=True),
+    Column("payload", JSON, nullable=False),
 )
 
 
@@ -228,6 +243,179 @@ class TableBinding:
         elif values:
             await session.execute(update(self.table).where(predicate).values(values))
 
+    async def read_rows(
+        self,
+        session: AsyncSession,
+        normalize: Callable[[dict[str, Any]], dict[str, Any]],
+    ) -> dict[str, dict[str, Any]]:
+        """Read the sync-visible projection used by change capture."""
+        selected = [*self.keys]
+        selected.extend(self.table.c[name] for name in self.fields.values())
+        rows = (
+            (await session.execute(select(*selected).order_by(*self.keys)))
+            .mappings()
+            .all()
+        )
+        result: dict[str, dict[str, Any]] = {}
+        for row in rows:
+            if len(self.keys) == 1:
+                key: Any = row[self.keys[0].name]
+            else:
+                key = {column.name: row[column.name] for column in self.keys}
+            entity_id = self.encode_key(key)
+            payload = {
+                field: row[column_name] for field, column_name in self.fields.items()
+            }
+            result[entity_id] = normalize(payload)
+        return result
+
+
+@dataclass(frozen=True)
+class CaptureReport:
+    """Work completed by one database change-capture scan."""
+
+    scanned_rows: int = 0
+    captured_changes: int = 0
+    initialized_entities: int = 0
+
+
+class SQLAlchemyChangeCapture:
+    """Poll registered SQL tables and append outside writes to the sync feed.
+
+    An entity's first scan stores a baseline without publishing its existing rows.
+    Later scans publish creates, updates, and deletes. The durable snapshot and feed
+    entries are committed together under the same clock lock as gateway writes.
+    """
+
+    def __init__(
+        self,
+        session_factory: Callable[[], AsyncSession],
+        bindings: Mapping[str, TableBinding],
+        normalizers: Mapping[str, Callable[[dict[str, Any]], dict[str, Any]]],
+    ):
+        self.session_factory = session_factory
+        self.bindings = dict(bindings)
+        self.normalizers = dict(normalizers)
+
+    async def capture_once(self) -> CaptureReport:
+        scanned_rows = captured_count = initialized_count = 0
+        async with self.session_factory() as session, session.begin():
+            sequence = await _lock_clock(session)
+            transaction = _Transaction(session, self.bindings, sequence)
+            for entity, binding in self.bindings.items():
+                current = await binding.read_rows(session, self.normalizers[entity])
+                scanned_rows += len(current)
+                initialized = await session.scalar(
+                    select(capture_checkpoints.c.entity).where(
+                        capture_checkpoints.c.entity == entity
+                    )
+                )
+                if initialized is None:
+                    await session.execute(
+                        delete(captured_rows).where(captured_rows.c.entity == entity)
+                    )
+                    await self._save_rows(session, entity, current)
+                    await session.execute(
+                        insert(capture_checkpoints).values(
+                            entity=entity, scanned_at=datetime.now(UTC)
+                        )
+                    )
+                    initialized_count += 1
+                    continue
+
+                previous_rows = (
+                    (
+                        await session.execute(
+                            select(
+                                captured_rows.c.entity_id,
+                                captured_rows.c.payload,
+                            ).where(captured_rows.c.entity == entity)
+                        )
+                    )
+                    .mappings()
+                    .all()
+                )
+                previous = {row["entity_id"]: row["payload"] for row in previous_rows}
+                for entity_id in sorted(current.keys() | previous.keys()):
+                    payload = current.get(entity_id)
+                    old_payload = previous.get(entity_id)
+                    if payload is None:
+                        await transaction.append_captured_change(
+                            entity, entity_id, "delete", {}
+                        )
+                        await session.execute(
+                            delete(captured_rows).where(
+                                captured_rows.c.entity == entity,
+                                captured_rows.c.entity_id == entity_id,
+                            )
+                        )
+                    elif old_payload is None:
+                        await transaction.append_captured_change(
+                            entity, entity_id, "create", payload
+                        )
+                        await self._save_row(session, entity, entity_id, payload)
+                    elif payload != old_payload:
+                        await transaction.append_captured_change(
+                            entity, entity_id, "update", payload
+                        )
+                        await session.execute(
+                            update(captured_rows)
+                            .where(
+                                captured_rows.c.entity == entity,
+                                captured_rows.c.entity_id == entity_id,
+                            )
+                            .values(payload=payload)
+                        )
+                    else:
+                        continue
+                    captured_count += 1
+                await session.execute(
+                    update(capture_checkpoints)
+                    .where(capture_checkpoints.c.entity == entity)
+                    .values(scanned_at=datetime.now(UTC))
+                )
+        return CaptureReport(scanned_rows, captured_count, initialized_count)
+
+    async def run(self, *, interval: float = 1.0) -> None:
+        """Continuously capture changes until the task is cancelled."""
+        if interval <= 0:
+            raise ValueError("Capture interval must be greater than zero")
+        while True:
+            await self.capture_once()
+            await asyncio.sleep(interval)
+
+    @staticmethod
+    async def _save_row(
+        session: AsyncSession, entity: str, entity_id: str, payload: dict[str, Any]
+    ) -> None:
+        await session.execute(
+            insert(captured_rows).values(
+                entity=entity, entity_id=entity_id, payload=payload
+            )
+        )
+
+    @classmethod
+    async def _save_rows(
+        cls,
+        session: AsyncSession,
+        entity: str,
+        rows: Mapping[str, dict[str, Any]],
+    ) -> None:
+        for entity_id, payload in rows.items():
+            await cls._save_row(session, entity, entity_id, payload)
+
+
+async def _lock_clock(session: AsyncSession) -> int:
+    backend = session.get_bind().dialect.name
+    if backend == "sqlite":
+        await session.execute(text("BEGIN IMMEDIATE"))
+    sequence = await session.scalar(
+        select(clock.c.sequence).where(clock.c.id == 1).with_for_update()
+    )
+    if sequence is None:
+        raise RuntimeError("Sync metadata is not initialized")
+    return sequence
+
 
 class SQLAlchemyStore:
     def __init__(
@@ -262,15 +450,7 @@ class SQLAlchemyStore:
             ) as span:
                 try:
                     async with session.begin():
-                        if backend == "sqlite":
-                            await session.execute(text("BEGIN IMMEDIATE"))
-                        sequence = await session.scalar(
-                            select(clock.c.sequence)
-                            .where(clock.c.id == 1)
-                            .with_for_update()
-                        )
-                        if sequence is None:
-                            raise RuntimeError("Sync metadata is not initialized")
+                        sequence = await _lock_clock(session)
                         yield _Transaction(session, self.bindings, sequence)
                 except BaseException:
                     outcome = "error"
@@ -412,6 +592,38 @@ class _Transaction:
             await self.session.execute(
                 update(versions).where(predicate).values(version=version)
             )
+        if isinstance(binding, TableBinding):
+            await self._sync_capture_snapshot(mutation)
+
+    async def _sync_capture_snapshot(self, mutation: Mutation) -> None:
+        initialized = await self.session.scalar(
+            select(capture_checkpoints.c.entity).where(
+                capture_checkpoints.c.entity == mutation.entity
+            )
+        )
+        if initialized is None:
+            return
+        predicate = (captured_rows.c.entity == mutation.entity) & (
+            captured_rows.c.entity_id == mutation.entity_id
+        )
+        existing = await self.session.scalar(
+            select(captured_rows.c.entity_id).where(predicate)
+        )
+        if mutation.operation == "delete":
+            if existing is not None:
+                await self.session.execute(delete(captured_rows).where(predicate))
+        elif existing is None:
+            await self.session.execute(
+                insert(captured_rows).values(
+                    entity=mutation.entity,
+                    entity_id=mutation.entity_id,
+                    payload=mutation.payload,
+                )
+            )
+        else:
+            await self.session.execute(
+                update(captured_rows).where(predicate).values(payload=mutation.payload)
+            )
 
     async def append_change(self, mutation: Mutation, version: int) -> None:
         self.sequence += 1
@@ -422,6 +634,44 @@ class _Transaction:
                 entity_id=mutation.entity_id,
                 operation=mutation.operation,
                 payload=mutation.payload,
+                version=version,
+                created_at=datetime.now(UTC),
+            )
+        )
+        await self.session.execute(
+            update(clock).where(clock.c.id == 1).values(sequence=self.sequence)
+        )
+
+    async def append_captured_change(
+        self,
+        entity: str,
+        entity_id: str,
+        operation: str,
+        payload: dict[str, Any],
+    ) -> None:
+        version = await self.get_version(entity, entity_id) + 1
+        predicate = (versions.c.entity == entity) & (versions.c.entity_id == entity_id)
+        existing = await self.session.scalar(
+            select(versions.c.version).where(predicate)
+        )
+        if existing is None:
+            await self.session.execute(
+                insert(versions).values(
+                    entity=entity, entity_id=entity_id, version=version
+                )
+            )
+        else:
+            await self.session.execute(
+                update(versions).where(predicate).values(version=version)
+            )
+        self.sequence += 1
+        await self.session.execute(
+            insert(changes).values(
+                sequence=self.sequence,
+                entity=entity,
+                entity_id=entity_id,
+                operation=operation,
+                payload=payload,
                 version=version,
                 created_at=datetime.now(UTC),
             )

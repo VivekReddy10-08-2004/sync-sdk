@@ -73,6 +73,13 @@ async def test_legacy_migration_preserves_cursor_results_and_latest_version(tmp_
         )
     await migrate("head")
     with sqlite3.connect(path) as db:
+        tables = {
+            row[0]
+            for row in db.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            )
+        }
+        assert {"sync_capture_checkpoints", "sync_captured_rows"} <= tables
         assert db.execute("SELECT sequence FROM sync_clock").fetchone()[0] == 12
         assert (
             db.execute(

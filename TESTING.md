@@ -261,8 +261,8 @@ adapter that follows the storage contract.
 - There is no ready-to-use MongoDB or other NoSQL driver.
 - The in-memory document adapter is test code only.
 - Existing database rows are not sent automatically.
-- Writes made outside the pipeline are not logged automatically.
-- Database triggers do not create sync changes automatically.
+- SQL change capture polls full registered tables; native transaction-log CDC is
+  not included for high-write or very large tables.
 - The application must add login and data access checks.
 - The current SQL write lock favors correct order over high write throughput.
 - Python 3.12 or newer is required.

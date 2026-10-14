@@ -110,9 +110,9 @@ For example, if an order row refers to a customer row:
 If a database rule blocks a write, the whole group of writes is undone. Pending
 client changes remain in the queue.
 
-The SDK does not create missing related rows for you. It also does not log changes
-made by a database trigger or by an automatic delete of linked rows. Add custom
-write code or change capture if your app needs those changes sent to clients.
+The SDK does not create missing related rows for you. Run the SQL change-capture
+worker when changes made by triggers, cascading deletes, or direct database writes
+must be sent to clients.
 
 ## Change the conflict rule
 
@@ -196,6 +196,8 @@ The SDK keeps its tracking data in separate tables:
 | `sync_versions` | The last version of each row, including deleted rows |
 | `sync_processed_mutations` | Results for requests already handled |
 | `sync_change_log` | The list of server changes |
+| `sync_capture_checkpoints` | Whether each entity has a capture baseline |
+| `sync_captured_rows` | The last sync-visible database snapshot |
 
 `initialize_sync_metadata(engine)` creates only these tables and the clock's
 starting row. If your own migrations create them, include `sync_metadata` and
@@ -207,11 +209,32 @@ in the right order. Changing this to allow more writers needs another way to kee
 that promise.
 
 Your data and the tracking tables must share one database transaction. MySQL tables
-must use a storage engine that supports transactions. Writes made outside the
-pipeline do not use its lock or enter its change list.
+must use a storage engine that supports transactions. Outside writers do not take
+the SDK clock lock; the polling worker detects their committed state and appends it
+under that lock on its next scan.
 
 Rows that already exist are not sent automatically. A row with no sync history
 starts at sync version zero.
+
+## Capture writes made outside the gateway
+
+`SQLAlchemyConfig.build_change_capture(sessions)` builds a portable polling worker
+for the registered tables. Its first `capture_once()` call stores a baseline and
+does not publish existing rows. Later calls compare each table's selected fields
+with the durable snapshot and append creates, updates, and deletes to the normal
+change log. `run(interval=...)` repeats this until cancelled.
+
+The snapshot, versions, clock, and captured changes commit together. Gateway
+writes update the snapshot in their own transaction, so the next scan does not
+publish them twice. Trigger changes to selected fields and cascading deletes are
+visible on the following scan. A change committed while a scan is in progress is
+picked up by that scan or the next one.
+
+This mechanism scans the registered tables rather than reading a vendor-specific
+transaction log. Its cost grows with the number of rows, so applications with
+large or high-write tables may need a native CDC adapter in place of this worker.
+Several writes to the same row between scans appear as one change with the final
+state.
 
 ## Add the gateway to an app
 
@@ -269,6 +292,6 @@ They also check that old database data still works after the update.
 
 The SQL adapter contract runs on SQLite, PostgreSQL, and MySQL. The GitHub Actions
 job starts real PostgreSQL and MySQL servers. It checks repeated sends, competing
-writes, conflicts, pulls, deletes, health checks, and storage metrics. Ready-to-use
-NoSQL adapters, automatic tracking of outside writes, and automatic sending of
-existing rows still need separate work.
+writes, conflicts, pulls, deletes, outside-write capture, health checks, and storage
+metrics. Ready-to-use NoSQL adapters, native transaction-log CDC, and automatic
+sending of existing rows still need separate work.

@@ -70,7 +70,7 @@ def metric_summary(telemetry: MetricCapture, backend: str) -> dict:
     pulls = telemetry.records["sync.storage.pull.duration"]
     health = telemetry.records["sync.storage.health.duration"]
     assert len(transactions) == 4
-    assert len(pulls) == 2
+    assert len(pulls) == 3
     assert len(health) == 1
     for samples in (transactions, pulls, health):
         assert all(attributes["db.system.name"] == backend for _, attributes in samples)
@@ -114,6 +114,15 @@ async def run_contract(database_url: str) -> dict:
         await config.create_tables(engine)
         sessions = async_sessionmaker(engine, expire_on_commit=False)
         gateway = config.build(sessions, telemetry=telemetry)
+        capture = config.build_change_capture(sessions)
+
+        # Existing rows form the first durable baseline and are not backfilled.
+        async with sessions.begin() as session:
+            await session.execute(tasks.insert().values(id=99, title="existing"))
+        baseline = await capture.capture_once()
+        assert baseline.scanned_rows == 1
+        assert baseline.initialized_entities == 1
+        assert baseline.captured_changes == 0
 
         create = mutation("1")
         repeated = await gateway.apply_mutations([create, create])
@@ -139,7 +148,32 @@ async def run_contract(database_url: str) -> dict:
         assert deleted[0].status == "applied"
         assert deleted[0].server_version == 3
         async with sessions() as session:
-            assert (await session.execute(select(tasks))).first() is None
+            assert [row.id for row in (await session.execute(select(tasks))).all()] == [
+                99
+            ]
+
+        # Gateway writes update the snapshot transactionally and are not echoed.
+        assert (await capture.capture_once()).captured_changes == 0
+
+        async with sessions.begin() as session:
+            await session.execute(tasks.insert().values(id=2, title="direct create"))
+        assert (await capture.capture_once()).captured_changes == 1
+        async with sessions.begin() as session:
+            await session.execute(
+                tasks.update().where(tasks.c.id == 2).values(title="direct update")
+            )
+        assert (await capture.capture_once()).captured_changes == 1
+        async with sessions.begin() as session:
+            await session.execute(tasks.delete().where(tasks.c.id == 2))
+        assert (await capture.capture_once()).captured_changes == 1
+
+        captured = await gateway.get_changes(3, limit=10)
+        assert [change.operation for change in captured.changes] == [
+            "create",
+            "update",
+            "delete",
+        ]
+        assert [change.version for change in captured.changes] == [1, 2, 3]
         assert await gateway.health_check()
         return metric_summary(telemetry, backend)
     finally:

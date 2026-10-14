@@ -170,6 +170,39 @@ from sync_sdk.adapters.sqlalchemy import initialize_sync_metadata
 await initialize_sync_metadata(engine)
 ```
 
+## Capture writes made directly to the database
+
+The optional SQL change-capture worker detects inserts, updates, and deletes made
+outside the gateway, including trigger side effects and cascading deletes on
+registered tables. It polls only the fields selected by `register_table()` and
+adds detected changes to the same ordered feed as normal sync writes.
+
+Build it from the same configuration and session factory as the gateway:
+
+```python
+import asyncio
+
+capture = config.build_change_capture(sessions)
+
+# Establish the durable baseline before accepting outside writes. Existing rows
+# are recorded here but are not sent to clients as new changes.
+await capture.capture_once()
+
+# Keep this task for your application's lifetime and cancel it during shutdown.
+capture_task = asyncio.create_task(capture.run(interval=1.0))
+```
+
+`capture_once()` can also be called by an existing scheduler. It returns a report
+with `scanned_rows`, `captured_changes`, and `initialized_entities`. Repeated or
+concurrent scans are safe; one worker is normally enough. If a database row does
+not satisfy its registered schema, the scan fails without advancing its snapshot.
+
+Capture state is stored in `sync_capture_checkpoints` and `sync_captured_rows`.
+Applications that manage SDK tables with migrations must add both tables before
+starting the worker. Polling scans each registered table, so choose an interval
+that fits the table sizes and write rate. Multiple writes to one row between scans
+are captured as one change containing the final state.
+
 ## Add sync routes to your app
 
 For FastAPI:
@@ -290,6 +323,8 @@ for client and server setup, metric names, traces, and useful alerts.
 - A local SQLite queue and record view.
 - A SQLAlchemy adapter for your own tables. An **adapter** connects the pipeline
   to a chosen database or way of sending data.
+- Polling capture for direct SQL writes, database-trigger side effects, and
+  cascading deletes on registered SQL tables.
 - HTTP and direct calls within the same process.
 - FastAPI routes you can add to your app.
 - Rules that let developers write other storage and transport adapters.
@@ -305,13 +340,8 @@ for keys made from several columns, linked tables, custom types, and adapter rul
 Your app owns login checks, data access, table changes, and how long to keep saved
 sync results.
 
-Existing rows are not sent automatically. Writes made directly to the database
-are not picked up automatically either. Send changes through the pipeline, or
-add a way to record those outside writes. A row with no sync history starts at
-sync version zero.
-
-Changes made by database triggers or automatic linked-row deletes are also not
-added to sync on their own.
+Existing rows are not sent automatically. The change-capture worker uses them as
+its initial baseline. A row with no sync history starts at sync version zero.
 
 ## Run the sample server
 
