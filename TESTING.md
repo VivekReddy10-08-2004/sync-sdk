@@ -4,17 +4,18 @@
 
 - Package: `sync-sdk`
 - Version: `0.1.1`
-- Report date: September 15, 2026
+- Report date: October 13, 2026
 - Python used: 3.12.4
 
 This report states what was tested. It also states what is not included yet.
 
 ## Result
 
-The normal test suite collected 54 tests.
+The normal test suite collected 61 tests.
 
-- 52 passed.
-- 2 were skipped as expected.
+- 58 passed.
+- 3 were skipped as expected, including the live MongoDB test because Docker and
+  `SYNC_TEST_MONGODB_URL` were unavailable locally.
 - 0 failed.
 
 A clean source package and wheel were built:
@@ -32,9 +33,11 @@ worked, and the installed version was `0.1.1`.
 | SQLite | 3.45.3 | `aiosqlite` | Passed |
 | PostgreSQL | 16.15 | `asyncpg` | Passed |
 | MySQL | 5.7.24 | `asyncmy` | Passed |
+| MongoDB | 8.0 CI target | PyMongo async | Live CI contract configured; local run skipped |
 
-The GitHub Actions database job is also set to run PostgreSQL 16 and MySQL 8.4.
-It starts clean database services for every run.
+The GitHub Actions database workflow is set to run PostgreSQL 16, MySQL 8.4, and
+MongoDB 8.0 as a single-node replica set. It starts clean database services for
+every run.
 
 The same adapter contract runs against each database. The application table and
 the SDK tracking tables are created before the test and removed after the test.
@@ -249,6 +252,11 @@ The last command should print:
 The tested SQL adapter can apply the same sync rules on SQLite, PostgreSQL, and
 MySQL.
 
+The MongoDB contract checks idempotency, competing versions, ordered pulls,
+deletes, private-field preservation, failed-transaction rollback, and health
+against a replica set. It is skipped when `SYNC_TEST_MONGODB_URL` is absent; the
+database workflow supplies that URL and starts a clean replica set.
+
 Developers can register their own SQLAlchemy tables and choose which fields are
 synced. The SDK owns only its tracking tables. The application still owns its
 database, login rules, access rules, and schema changes.
@@ -258,7 +266,7 @@ adapter that follows the storage contract.
 
 ## Current limits
 
-- There is no ready-to-use MongoDB or other NoSQL driver.
+- MongoDB is the only ready-to-use NoSQL adapter.
 - The in-memory document adapter is test code only.
 - Existing database rows are not sent automatically.
 - SQL change capture polls full registered tables; native transaction-log CDC is
@@ -280,5 +288,4 @@ Complete these release steps:
 - Create a version tag.
 - Use PyPI Trusted Publishing for the final upload.
 
-Do not describe this release as supporting a ready-made NoSQL database adapter.
 Do not describe the timing table as a benchmark.

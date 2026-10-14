@@ -64,6 +64,9 @@ pip install 'sync-sdk[http,fastapi,sqlite]'
 # HTTP, FastAPI, and MySQL support
 pip install 'sync-sdk[http,fastapi,mysql]'
 
+# HTTP, FastAPI, and MongoDB support
+pip install 'sync-sdk[http,fastapi,mongodb]'
+
 # Add OpenTelemetry and SigNoz support
 pip install 'sync-sdk[http,fastapi,postgres,observability]'
 ```
@@ -95,6 +98,14 @@ uv run pytest tests/integration/test_sql_database_adapters.py -q
 
 Set both values to test both servers in one run.
 
+Run the MongoDB contract against an empty test database on a replica set or
+sharded cluster. Its database name must contain `test`:
+
+```sh
+SYNC_TEST_MONGODB_URL='mongodb://localhost:27017/sync_test?replicaSet=rs0' \
+uv run --extra mongodb pytest tests/integration/test_mongodb_adapter.py -q
+```
+
 The full test method, verified database versions, measured times, package checks,
 limits, and release steps are in the
 [testing and verification report](https://github.com/VivekReddy10-08-2004/sync-sdk/blob/master/TESTING.md).
@@ -102,8 +113,8 @@ This full link also works from the PyPI page.
 
 Set `SYNC_TEST_METRICS_PATH=database-adapter-metrics.json` to save transaction,
 pull, and health-check times for each database. The Database adapters GitHub
-Actions job starts real PostgreSQL and MySQL servers, runs this test, and saves
-the JSON and JUnit reports.
+Actions workflow starts real PostgreSQL, MySQL, and MongoDB servers and saves its
+JSON and JUnit reports.
 
 ## Choose your tables and fields
 
@@ -325,15 +336,19 @@ for client and server setup, metric names, traces, and useful alerts.
   to a chosen database or way of sending data.
 - Polling capture for direct SQL writes, database-trigger side effects, and
   cascading deletes on registered SQL tables.
+- A transactional MongoDB adapter for application-owned collections.
 - HTTP and direct calls within the same process.
 - FastAPI routes you can add to your app.
 - Rules that let developers write other storage and transport adapters.
 
-Tests use real SQLite, PostgreSQL, and MySQL databases. The same storage contract
-runs on all three. There is no ready-to-use MongoDB or other NoSQL adapter yet.
+Tests use real SQLite, PostgreSQL, MySQL, and MongoDB databases. The SQL contract
+runs on the first three; the same gateway guarantees are tested on a MongoDB
+replica set.
 
 See the [setup and adapter guide](https://github.com/VivekReddy10-08-2004/sync-sdk/blob/master/docs/approach_architecture.md)
 for keys made from several columns, linked tables, custom types, and adapter rules.
+See the [MongoDB adapter guide](https://github.com/VivekReddy10-08-2004/sync-sdk/blob/master/docs/mongodb.md)
+for collection mapping, initialization, deployment requirements, and retries.
 
 ## What your app still handles
 

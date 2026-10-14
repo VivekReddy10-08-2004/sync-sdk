@@ -81,3 +81,49 @@ jobs:
             database-adapter-metrics.json
             database-adapter-tests.xml
           if-no-files-found: ignore
+
+  live-mongodb:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.1.0
+        with:
+          version: "0.12.13"
+          enable-cache: true
+
+      - name: Start MongoDB replica set
+        run: |
+          docker run --detach --name sync-mongodb --publish 27017:27017 \
+            mongo:8.0 --replSet rs0 --bind_ip_all
+          for attempt in $(seq 1 60); do
+            docker exec sync-mongodb mongosh --quiet \
+              --eval 'db.adminCommand({ping: 1}).ok' >/dev/null 2>&1 && break
+            test "$attempt" -lt 60 || exit 1
+            sleep 1
+          done
+          docker exec sync-mongodb mongosh --quiet --eval \
+            'rs.initiate({_id: "rs0", members: [{_id: 0, host: "localhost:27017"}]})'
+          for attempt in $(seq 1 60); do
+            docker exec sync-mongodb mongosh --quiet \
+              --eval 'db.hello().isWritablePrimary' | grep -q true && break
+            test "$attempt" -lt 60 || exit 1
+            sleep 1
+          done
+
+      - name: Install test dependencies
+        run: uv sync --locked --group dev --extra mongodb
+
+      - name: Test MongoDB adapter
+        env:
+          SYNC_TEST_MONGODB_URL: "mongodb://127.0.0.1:27017/sync_test?replicaSet=rs0&directConnection=true"
+        run: >-
+          uv run pytest tests/integration/test_mongodb_adapter.py
+          -q --junitxml=mongodb-adapter-tests.xml
+
+      - name: Save MongoDB test report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mongodb-adapter-report
+          path: mongodb-adapter-tests.xml
+          if-no-files-found: ignore

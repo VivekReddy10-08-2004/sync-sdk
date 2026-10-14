@@ -42,6 +42,9 @@ observability = [
     "opentelemetry-instrumentation-fastapi>=0.59b0",
     "opentelemetry-instrumentation-httpx>=0.59b0",
 ]
+mongodb = [
+    "pymongo>=4.11.0",
+]
 
 [dependency-groups]
 dev = [
