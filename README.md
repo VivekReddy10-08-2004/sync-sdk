@@ -118,11 +118,11 @@ JSON and JUnit reports.
 
 ## Benchmark gateway and storage throughput
 
-![Preliminary SQLite benchmark: concurrency 1 applied all 1,000 mutations at 53.03 per second; concurrency 8 applied 300 and failed 700 because of database locking](docs/assets/benchmark-summary.svg)
+![PostgreSQL 16 benchmark: all mutations applied with zero failures from concurrency 1 through 8; throughput stayed between 374.82 and 409.20 mutations per second while p95 batch latency increased](docs/assets/postgresql-benchmark-summary.svg)
 
-The eight-writer run preserved correctness but exposed SQLite write contention;
-it is not evidence of high-throughput scaling. Reproduce the baseline and save
-its JSON report:
+PostgreSQL applied every mutation at concurrency 1, 2, 4, and 8. Throughput held
+near 375–409 mutations/s, while rising latency shows queueing at the shared clock.
+Reproduce the baseline and save its JSON report:
 
 ```sh
 uv run --extra sqlite python benchmarks/sync_throughput.py \

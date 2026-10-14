@@ -191,10 +191,12 @@ Times change with the computer, database settings, connection distance, and load
 
 `benchmarks/sync_throughput.py` runs a configurable create workload, reports
 successful mutations per second and batch latency, and audits the stored rows and
-change feed afterward. The preliminary SQLite baseline and commands for SQLite,
-PostgreSQL, and MySQL are in the [throughput benchmark guide](docs/benchmarks.md).
-The measured database times above remain contract-test instrumentation and should
-not be compared as throughput results.
+change feed afterward. PostgreSQL 16 applied all 4,000 measured mutations across
+concurrency 1, 2, 4, and 8 with zero failures; throughput ranged from 374.82 to
+409.20 mutations/s. The raw run, SQLite comparison, and reproduction commands are
+in the [throughput benchmark guide](docs/benchmarks.md). The measured database
+times above remain contract-test instrumentation and should not be compared as
+throughput results.
 
 ## OpenTelemetry and SigNoz checks
 

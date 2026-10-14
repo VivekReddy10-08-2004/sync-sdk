@@ -56,7 +56,27 @@ uv run --extra mysql python benchmarks/sync_throughput.py \
 Keep the mutation count, batch size, concurrency, database resources, and host
 stable when comparing revisions. Run several trials and report the median.
 
-## Preliminary local result
+## PostgreSQL 16 CI result
+
+The [GitHub Actions run](https://github.com/VivekReddy10-08-2004/sync-sdk/actions/runs/38650288099)
+measured PostgreSQL 16 on October 14, 2026. The runner used Linux x86-64,
+4 logical CPUs, and Python 3.12.3. Every run used 1,000 measured creates,
+100 warmup creates, and batches of 100.
+
+| Concurrency | Applied | Failed | Successful mutations/s | Mean batch latency | p95 batch latency | Audit |
+| ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| 1 | 1,000 | 0 | 409.20 | 244.368 ms | 259.650 ms | Passed |
+| 2 | 1,000 | 0 | 407.59 | 466.168 ms | 509.502 ms | Passed |
+| 4 | 1,000 | 0 | 401.97 | 849.518 ms | 1,013.146 ms | Passed |
+| 8 | 1,000 | 0 | 374.82 | 1,419.920 ms | 2,156.099 ms | Passed |
+
+PostgreSQL handled every tested concurrency without mutation failures or partial
+writes. Throughput remained relatively flat and decreased at concurrency 8 while
+latency rose as writers waited for the shared clock. This proves reliable
+contention handling for this short workload; it does not prove horizontal write
+scaling or sustained-load capacity.
+
+## Preliminary SQLite result
 
 These results were measured on October 14, 2026, using Python 3.12.4 and a
 temporary SQLite database on Linux x86-64 with 32 logical CPUs. Each batch held
