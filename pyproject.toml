@@ -3,6 +3,7 @@ name = "sync-sdk"
 version = "0.2.0"
 description = "Embeddable synchronization pipelines with pluggable storage and transports"
 readme = "README.md"
+license = "MIT"
 authors = [
     { name = "VivekReddy10-08-2004", email = "vivek.bhimavarapu@maine.edu" }
 ]
@@ -93,6 +94,8 @@ build-backend = "uv_build"
 [tool.uv.build-backend]
 source-include = [
     "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "LICENSE",
     "SECURITY.md",
     "TESTING.md",
     "docs/**",

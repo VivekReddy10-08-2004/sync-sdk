@@ -14,6 +14,7 @@ versioning while allowing breaking API changes before version 1.0.
 - Reproducible PostgreSQL, MySQL, MongoDB, and SQLite throughput benchmarks.
 - Database concurrency benchmarks with correctness auditing in GitHub Actions.
 - Benchmark results and concise comparison visuals.
+- MIT licensing and a DCO-based contribution policy.
 
 ### Changed
 

@@ -296,7 +296,6 @@ adapter that follows the storage contract.
 
 Complete these release steps:
 
-- Choose and add a license file.
 - Merge the release branch into `master` after every required check passes.
 - Publish the package to TestPyPI first.
 - Install the TestPyPI wheel into a clean environment.

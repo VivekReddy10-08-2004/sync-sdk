@@ -402,3 +402,13 @@ uv run pytest -q
 Tests cover retries, repeated sends, conflicts, table setup, linked tables, failed
 writes, restarts, and a process stopping during a write. They do not simulate a
 physical power failure.
+
+## Contributing
+
+See [CONTRIBUTING.md](https://github.com/VivekReddy10-08-2004/sync-sdk/blob/master/CONTRIBUTING.md)
+for setup, validation, and commit sign-off requirements. Security reports should
+follow [SECURITY.md](https://github.com/VivekReddy10-08-2004/sync-sdk/blob/master/SECURITY.md).
+
+## License
+
+Sync SDK is available under the [MIT License](https://github.com/VivekReddy10-08-2004/sync-sdk/blob/master/LICENSE).
