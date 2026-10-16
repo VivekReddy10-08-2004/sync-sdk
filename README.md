@@ -31,17 +31,17 @@ uses:
 
 ```sh
 # Recommended production gateway
-pip install 'sync-sdk[http,fastapi,postgres]'
+pip install 'offline-sync-sdk[http,fastapi,postgres]'
 
 # Other supported gateway databases
-pip install 'sync-sdk[http,fastapi,mysql]'
-pip install 'sync-sdk[http,fastapi,mongodb]'
+pip install 'offline-sync-sdk[http,fastapi,mysql]'
+pip install 'offline-sync-sdk[http,fastapi,mongodb]'
 
 # Local development or a small single-instance gateway
-pip install 'sync-sdk[http,fastapi,sqlite]'
+pip install 'offline-sync-sdk[http,fastapi,sqlite]'
 
 # Optional OpenTelemetry support
-pip install 'sync-sdk[http,fastapi,postgres,observability]'
+pip install 'offline-sync-sdk[http,fastapi,postgres,observability]'
 ```
 
 Python 3.12 or newer is required. The device outbox uses Python's built-in SQLite

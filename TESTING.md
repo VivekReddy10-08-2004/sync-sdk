@@ -2,7 +2,8 @@
 
 ## Release
 
-- Package: `sync-sdk`
+- Distribution: `offline-sync-sdk`
+- Import package: `sync_sdk`
 - Version: `0.2.0`
 - Report date: October 16, 2026
 - Python used: 3.12.4
@@ -20,8 +21,8 @@ The normal test suite collected 61 tests.
 
 A clean source package and wheel were built:
 
-- `sync_sdk-0.2.0.tar.gz`
-- `sync_sdk-0.2.0-py3-none-any.whl`
+- `offline_sync_sdk-0.2.0.tar.gz`
+- `offline_sync_sdk-0.2.0-py3-none-any.whl`
 
 The wheel was installed into a new Python environment. Importing `sync_sdk`
 worked, and the installed version was `0.2.0`.
@@ -253,9 +254,9 @@ Create a clean environment and install the wheel:
 uv venv /tmp/sync-sdk-wheel-test --clear
 uv pip install \
   --python /tmp/sync-sdk-wheel-test/bin/python \
-  dist/sync_sdk-0.2.0-py3-none-any.whl
+  dist/offline_sync_sdk-0.2.0-py3-none-any.whl
 /tmp/sync-sdk-wheel-test/bin/python -c \
-  'import importlib.metadata as m; import sync_sdk; print(m.version("sync-sdk"))'
+  'import importlib.metadata as m; import sync_sdk; print(m.version("offline-sync-sdk"))'
 ```
 
 The last command should print:

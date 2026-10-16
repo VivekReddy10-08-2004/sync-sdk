@@ -1,5 +1,5 @@
 [project]
-name = "sync-sdk"
+name = "offline-sync-sdk"
 version = "0.2.0"
 description = "Embeddable synchronization pipelines with pluggable storage and transports"
 readme = "README.md"
@@ -92,6 +92,7 @@ requires = ["uv_build>=0.12.3,<0.13.0"]
 build-backend = "uv_build"
 
 [tool.uv.build-backend]
+module-name = "sync_sdk"
 source-include = [
     "CHANGELOG.md",
     "CONTRIBUTING.md",

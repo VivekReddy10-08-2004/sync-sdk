@@ -1062,6 +1062,140 @@ wheels = [
 ]
 
 [[package]]
+name = "offline-sync-sdk"
+version = "0.2.0"
+source = { editable = "." }
+dependencies = [
+    { name = "pydantic" },
+]
+
+[package.optional-dependencies]
+fastapi = [
+    { name = "fastapi" },
+]
+gateway = [
+    { name = "aiosqlite" },
+    { name = "alembic" },
+    { name = "asyncmy" },
+    { name = "asyncpg" },
+    { name = "cryptography" },
+    { name = "fastapi" },
+    { name = "httpx" },
+    { name = "psycopg", extra = ["binary"] },
+    { name = "pydantic-settings" },
+    { name = "sqlalchemy", extra = ["asyncio"] },
+    { name = "uvicorn", extra = ["standard"] },
+]
+http = [
+    { name = "httpx" },
+]
+mongodb = [
+    { name = "pymongo" },
+]
+mysql = [
+    { name = "asyncmy" },
+    { name = "cryptography" },
+    { name = "sqlalchemy", extra = ["asyncio"] },
+]
+observability = [
+    { name = "opentelemetry-api" },
+    { name = "opentelemetry-exporter-otlp-proto-http" },
+    { name = "opentelemetry-instrumentation-fastapi" },
+    { name = "opentelemetry-instrumentation-httpx" },
+    { name = "opentelemetry-sdk" },
+]
+postgres = [
+    { name = "asyncpg" },
+    { name = "sqlalchemy", extra = ["asyncio"] },
+]
+sqlalchemy = [
+    { name = "sqlalchemy", extra = ["asyncio"] },
+]
+sqlite = [
+    { name = "aiosqlite" },
+    { name = "sqlalchemy", extra = ["asyncio"] },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "aiosqlite" },
+    { name = "alembic" },
+    { name = "asyncpg" },
+    { name = "fastapi" },
+    { name = "httpx" },
+    { name = "mypy" },
+    { name = "opentelemetry-api" },
+    { name = "opentelemetry-exporter-otlp-proto-http" },
+    { name = "opentelemetry-instrumentation-fastapi" },
+    { name = "opentelemetry-instrumentation-httpx" },
+    { name = "opentelemetry-sdk" },
+    { name = "psycopg", extra = ["binary"] },
+    { name = "pydantic-settings" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+    { name = "sqlalchemy", extra = ["asyncio"] },
+    { name = "testcontainers" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aiosqlite", marker = "extra == 'gateway'", specifier = ">=0.22.1" },
+    { name = "aiosqlite", marker = "extra == 'sqlite'", specifier = ">=0.22.1" },
+    { name = "alembic", marker = "extra == 'gateway'", specifier = ">=1.16.0" },
+    { name = "asyncmy", marker = "extra == 'gateway'", specifier = ">=0.2.10" },
+    { name = "asyncmy", marker = "extra == 'mysql'", specifier = ">=0.2.10" },
+    { name = "asyncpg", marker = "extra == 'gateway'", specifier = ">=0.30.0" },
+    { name = "asyncpg", marker = "extra == 'postgres'", specifier = ">=0.30.0" },
+    { name = "cryptography", marker = "extra == 'gateway'", specifier = ">=44.0.0" },
+    { name = "cryptography", marker = "extra == 'mysql'", specifier = ">=44.0.0" },
+    { name = "fastapi", marker = "extra == 'fastapi'", specifier = ">=0.116.0" },
+    { name = "fastapi", marker = "extra == 'gateway'", specifier = ">=0.116.0" },
+    { name = "httpx", marker = "extra == 'gateway'", specifier = ">=0.28.0" },
+    { name = "httpx", marker = "extra == 'http'", specifier = ">=0.28.0" },
+    { name = "opentelemetry-api", marker = "extra == 'observability'", specifier = ">=1.38.0" },
+    { name = "opentelemetry-exporter-otlp-proto-http", marker = "extra == 'observability'", specifier = ">=1.38.0" },
+    { name = "opentelemetry-instrumentation-fastapi", marker = "extra == 'observability'", specifier = ">=0.59b0" },
+    { name = "opentelemetry-instrumentation-httpx", marker = "extra == 'observability'", specifier = ">=0.59b0" },
+    { name = "opentelemetry-sdk", marker = "extra == 'observability'", specifier = ">=1.38.0" },
+    { name = "psycopg", extras = ["binary"], marker = "extra == 'gateway'", specifier = ">=3.3.5" },
+    { name = "pydantic", specifier = ">=2.11.0" },
+    { name = "pydantic-settings", marker = "extra == 'gateway'", specifier = ">=2.10.0" },
+    { name = "pymongo", marker = "extra == 'mongodb'", specifier = ">=4.11.0" },
+    { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'gateway'", specifier = ">=2.0.40" },
+    { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'mysql'", specifier = ">=2.0.40" },
+    { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'postgres'", specifier = ">=2.0.40" },
+    { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'sqlalchemy'", specifier = ">=2.0.40" },
+    { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'sqlite'", specifier = ">=2.0.40" },
+    { name = "uvicorn", extras = ["standard"], marker = "extra == 'gateway'", specifier = ">=0.35.0" },
+]
+provides-extras = ["http", "sqlalchemy", "fastapi", "sqlite", "postgres", "mysql", "gateway", "observability", "mongodb"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "aiosqlite", specifier = ">=0.22.1" },
+    { name = "alembic", specifier = ">=1.16.0" },
+    { name = "asyncpg", specifier = ">=0.30.0" },
+    { name = "fastapi", specifier = ">=0.116.0" },
+    { name = "httpx", specifier = ">=0.28.0" },
+    { name = "mypy", specifier = ">=1.17.0" },
+    { name = "opentelemetry-api", specifier = ">=1.38.0" },
+    { name = "opentelemetry-exporter-otlp-proto-http", specifier = ">=1.38.0" },
+    { name = "opentelemetry-instrumentation-fastapi", specifier = ">=0.59b0" },
+    { name = "opentelemetry-instrumentation-httpx", specifier = ">=0.59b0" },
+    { name = "opentelemetry-sdk", specifier = ">=1.38.0" },
+    { name = "psycopg", extras = ["binary"], specifier = ">=3.3.5" },
+    { name = "pydantic-settings", specifier = ">=2.10.0" },
+    { name = "pytest", specifier = ">=8.4.0" },
+    { name = "pytest-asyncio", specifier = ">=1.1.0" },
+    { name = "pytest-cov", specifier = ">=6.2.0" },
+    { name = "ruff", specifier = ">=0.12.0" },
+    { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.40" },
+    { name = "testcontainers", extras = ["postgres"], specifier = ">=4.12.0" },
+]
+
+[[package]]
 name = "opentelemetry-api"
 version = "1.44.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1695,140 +1829,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/b5/b4/205b0d5241d934e8add0c38aa924c4f9fb7330834ff11e5444db964ec3f9/starlette-1.6.0.tar.gz", hash = "sha256:d4e3ac5e546444960c710297a3c9fc3f7ebae1b7e963f3d36173b49da535be9b", size = 2716969, upload-time = "2026-08-08T18:27:57.512Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c8/cb/6a6a47d5b464bd08695d254f3da6e7986cc70c9fa5d778eda57538edfe56/starlette-1.6.0-py3-none-any.whl", hash = "sha256:a86dd39d14bb45f85a3d18525215a9ef0cfd1f192ac793220e72598c90335f0c", size = 75969, upload-time = "2026-08-08T18:27:56.196Z" },
-]
-
-[[package]]
-name = "sync-sdk"
-version = "0.2.0"
-source = { editable = "." }
-dependencies = [
-    { name = "pydantic" },
-]
-
-[package.optional-dependencies]
-fastapi = [
-    { name = "fastapi" },
-]
-gateway = [
-    { name = "aiosqlite" },
-    { name = "alembic" },
-    { name = "asyncmy" },
-    { name = "asyncpg" },
-    { name = "cryptography" },
-    { name = "fastapi" },
-    { name = "httpx" },
-    { name = "psycopg", extra = ["binary"] },
-    { name = "pydantic-settings" },
-    { name = "sqlalchemy", extra = ["asyncio"] },
-    { name = "uvicorn", extra = ["standard"] },
-]
-http = [
-    { name = "httpx" },
-]
-mongodb = [
-    { name = "pymongo" },
-]
-mysql = [
-    { name = "asyncmy" },
-    { name = "cryptography" },
-    { name = "sqlalchemy", extra = ["asyncio"] },
-]
-observability = [
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-exporter-otlp-proto-http" },
-    { name = "opentelemetry-instrumentation-fastapi" },
-    { name = "opentelemetry-instrumentation-httpx" },
-    { name = "opentelemetry-sdk" },
-]
-postgres = [
-    { name = "asyncpg" },
-    { name = "sqlalchemy", extra = ["asyncio"] },
-]
-sqlalchemy = [
-    { name = "sqlalchemy", extra = ["asyncio"] },
-]
-sqlite = [
-    { name = "aiosqlite" },
-    { name = "sqlalchemy", extra = ["asyncio"] },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "aiosqlite" },
-    { name = "alembic" },
-    { name = "asyncpg" },
-    { name = "fastapi" },
-    { name = "httpx" },
-    { name = "mypy" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-exporter-otlp-proto-http" },
-    { name = "opentelemetry-instrumentation-fastapi" },
-    { name = "opentelemetry-instrumentation-httpx" },
-    { name = "opentelemetry-sdk" },
-    { name = "psycopg", extra = ["binary"] },
-    { name = "pydantic-settings" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-cov" },
-    { name = "ruff" },
-    { name = "sqlalchemy", extra = ["asyncio"] },
-    { name = "testcontainers" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "aiosqlite", marker = "extra == 'gateway'", specifier = ">=0.22.1" },
-    { name = "aiosqlite", marker = "extra == 'sqlite'", specifier = ">=0.22.1" },
-    { name = "alembic", marker = "extra == 'gateway'", specifier = ">=1.16.0" },
-    { name = "asyncmy", marker = "extra == 'gateway'", specifier = ">=0.2.10" },
-    { name = "asyncmy", marker = "extra == 'mysql'", specifier = ">=0.2.10" },
-    { name = "asyncpg", marker = "extra == 'gateway'", specifier = ">=0.30.0" },
-    { name = "asyncpg", marker = "extra == 'postgres'", specifier = ">=0.30.0" },
-    { name = "cryptography", marker = "extra == 'gateway'", specifier = ">=44.0.0" },
-    { name = "cryptography", marker = "extra == 'mysql'", specifier = ">=44.0.0" },
-    { name = "fastapi", marker = "extra == 'fastapi'", specifier = ">=0.116.0" },
-    { name = "fastapi", marker = "extra == 'gateway'", specifier = ">=0.116.0" },
-    { name = "httpx", marker = "extra == 'gateway'", specifier = ">=0.28.0" },
-    { name = "httpx", marker = "extra == 'http'", specifier = ">=0.28.0" },
-    { name = "opentelemetry-api", marker = "extra == 'observability'", specifier = ">=1.38.0" },
-    { name = "opentelemetry-exporter-otlp-proto-http", marker = "extra == 'observability'", specifier = ">=1.38.0" },
-    { name = "opentelemetry-instrumentation-fastapi", marker = "extra == 'observability'", specifier = ">=0.59b0" },
-    { name = "opentelemetry-instrumentation-httpx", marker = "extra == 'observability'", specifier = ">=0.59b0" },
-    { name = "opentelemetry-sdk", marker = "extra == 'observability'", specifier = ">=1.38.0" },
-    { name = "psycopg", extras = ["binary"], marker = "extra == 'gateway'", specifier = ">=3.3.5" },
-    { name = "pydantic", specifier = ">=2.11.0" },
-    { name = "pydantic-settings", marker = "extra == 'gateway'", specifier = ">=2.10.0" },
-    { name = "pymongo", marker = "extra == 'mongodb'", specifier = ">=4.11.0" },
-    { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'gateway'", specifier = ">=2.0.40" },
-    { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'mysql'", specifier = ">=2.0.40" },
-    { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'postgres'", specifier = ">=2.0.40" },
-    { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'sqlalchemy'", specifier = ">=2.0.40" },
-    { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'sqlite'", specifier = ">=2.0.40" },
-    { name = "uvicorn", extras = ["standard"], marker = "extra == 'gateway'", specifier = ">=0.35.0" },
-]
-provides-extras = ["http", "sqlalchemy", "fastapi", "sqlite", "postgres", "mysql", "gateway", "observability", "mongodb"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "aiosqlite", specifier = ">=0.22.1" },
-    { name = "alembic", specifier = ">=1.16.0" },
-    { name = "asyncpg", specifier = ">=0.30.0" },
-    { name = "fastapi", specifier = ">=0.116.0" },
-    { name = "httpx", specifier = ">=0.28.0" },
-    { name = "mypy", specifier = ">=1.17.0" },
-    { name = "opentelemetry-api", specifier = ">=1.38.0" },
-    { name = "opentelemetry-exporter-otlp-proto-http", specifier = ">=1.38.0" },
-    { name = "opentelemetry-instrumentation-fastapi", specifier = ">=0.59b0" },
-    { name = "opentelemetry-instrumentation-httpx", specifier = ">=0.59b0" },
-    { name = "opentelemetry-sdk", specifier = ">=1.38.0" },
-    { name = "psycopg", extras = ["binary"], specifier = ">=3.3.5" },
-    { name = "pydantic-settings", specifier = ">=2.10.0" },
-    { name = "pytest", specifier = ">=8.4.0" },
-    { name = "pytest-asyncio", specifier = ">=1.1.0" },
-    { name = "pytest-cov", specifier = ">=6.2.0" },
-    { name = "ruff", specifier = ">=0.12.0" },
-    { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.40" },
-    { name = "testcontainers", extras = ["postgres"], specifier = ">=4.12.0" },
 ]
 
 [[package]]

@@ -18,6 +18,9 @@ versioning while allowing breaking API changes before version 1.0.
 
 ### Changed
 
+- Published under the `offline-sync-sdk` distribution name to avoid a production
+  PyPI name collision; the `sync_sdk` import package and `sync-sdk` command remain
+  unchanged.
 - Documented PostgreSQL as the recommended production gateway database.
 - Expanded database, packaging, observability, and deployment guidance.
 
