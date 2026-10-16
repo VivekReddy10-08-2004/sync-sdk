@@ -121,7 +121,7 @@ JSON and JUnit reports.
 
 ## Benchmark gateway and storage throughput
 
-![Backend benchmark: PostgreSQL, MySQL, and MongoDB applied all mutations without failures from concurrency 1 through 8; the chart compares concurrency 1 and 8 throughput and concurrency 8 p95 latency](https://raw.githubusercontent.com/VivekReddy10-08-2004/sync-sdk/master/docs/assets/backend-benchmark-comparison.svg)
+![Backend benchmark: PostgreSQL, MySQL, and MongoDB applied all mutations without failures from concurrency 1 through 8; the chart compares concurrency 1 and 8 throughput and concurrency 8 p95 latency](https://raw.githubusercontent.com/VivekReddy10-08-2004/sync-sdk/258bad0235bb9a0056b9a36bbdb31fc63ea13b0a/docs/assets/backend-benchmark-comparison.svg)
 
 PostgreSQL, MySQL, and MongoDB applied every mutation at concurrency 1, 2, 4,
 and 8. Rising latency shows that batches queue behind each adapter's shared clock.
