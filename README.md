@@ -28,14 +28,72 @@ WORKER
 
 ## How it works
 
-![Sync SDK architecture diagram](https://raw.githubusercontent.com/VivekReddy10-08-2004/sync-sdk/master/Architecture%20Diagram.png)
+```mermaid
+flowchart TB
+    subgraph device["Device"]
+        direction LR
+        app["Application"]
+        client["SyncClient<br/>enqueue · sync_once · run"]
+        local[("SQLiteStore<br/>outbox · synced records<br/>cursor · retry state")]
+        local_note["enqueue writes the outbox only<br/>pulled records + cursor commit atomically"]
+
+        app -->|"enqueue mutation"| client
+        client -->|"durable enqueue<br/>acknowledge · retry state"| local
+        local -->|"FIFO pending batch<br/>cursor"| client
+        local -->|"read server-derived state"| app
+        local --- local_note
+    end
+
+    subgraph transport["Transport"]
+        direction LR
+        http["HTTPTransport<br/>POST mutations · GET changes<br/>retry connection, 408, 429, 5xx"]
+        network["Network<br/>offline · timeout · lost response"]
+    end
+
+    subgraph host["Host application"]
+        direction LR
+        access["Authentication<br/>authorization · tenant scope"]
+        routes["FastAPI sync routes"]
+        gateway["SyncGateway<br/>validation · conflicts · idempotency"]
+
+        access --> routes --> gateway
+    end
+
+    subgraph server["Server database adapter: PostgreSQL · MySQL · SQLite · MongoDB"]
+        direction LR
+        transaction["One adapter transaction<br/>whole batch commits or rolls back"]
+        records[("Business records<br/>+ sync versions")]
+        results[("Processed mutation results<br/>for idempotent replay")]
+        feed[("Ordered change feed<br/>+ sequence clock")]
+        capture["Optional SQL change capture<br/>direct writes · triggers · cascades"]
+    end
+
+    client <-->|"push batches<br/>pull pages"| http
+    http <--> network <--> access
+    client -.->|"DirectTransport<br/>(same process)"| gateway
+
+    gateway --> transaction
+    transaction -->|"accepted writes"| records
+    transaction -->|"applied · conflict · rejected results"| results
+    transaction -->|"accepted changes"| feed
+    feed -->|"changes after cursor"| gateway
+    records -.->|"poll selected fields"| capture
+    capture -.->|"append detected changes"| feed
+
+    retry["Retryable failures keep mutations pending<br/>stable IDs make replay safe"]
+    http --- retry
+```
 
 1. Your app adds a change to a local queue, called the **outbox**.
 2. The SDK saves that change before returning to your app.
 3. The client sends queued changes to the **gateway**, the server part of the SDK.
-4. The gateway checks the data and writes it to the tables you chose.
-5. The client saves the result and its place in the server change list.
-6. After a restart, the client continues from that saved place.
+4. The gateway validates the batch and commits business writes, mutation results,
+   versions, and change-feed entries in one database transaction.
+5. The client saves each result in its outbox, then pulls change-feed pages.
+6. Each pulled page updates local records and its cursor in one SQLite transaction.
+7. Retryable failures leave mutations pending with the same IDs, so an uncertain
+   response can be replayed safely.
+8. After a restart, the client resumes from its saved outbox and cursor state.
 
 Each change has its own ID. Sending that same change again does not apply it twice.
 
