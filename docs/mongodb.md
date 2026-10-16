@@ -15,7 +15,7 @@ validation, conflict, HTTP, and client pipeline as the SQL adapter.
 Install the optional driver with the server dependencies you use:
 
 ```sh
-pip install 'sync-sdk[mongodb,http,fastapi]'
+pip install 'offline-sync-sdk[mongodb,http,fastapi]'
 ```
 
 ## Configure collections

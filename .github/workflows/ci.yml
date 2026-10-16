@@ -61,7 +61,7 @@ jobs:
           uv venv /tmp/sync-sdk-wheel-check
           uv pip install --python /tmp/sync-sdk-wheel-check/bin/python dist/*.whl
           /tmp/sync-sdk-wheel-check/bin/python -c \
-            'import importlib.metadata as m; import sync_sdk; print(m.version("sync-sdk"))'
+            'import importlib.metadata as m; import sync_sdk; print(m.version("offline-sync-sdk"))'
 
       - name: Save distributions
         uses: actions/upload-artifact@v7
