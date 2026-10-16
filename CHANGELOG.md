@@ -5,7 +5,7 @@ versioning while allowing breaking API changes before version 1.0.
 
 ## [Unreleased]
 
-## [0.2.0] - 2026-10-15
+## [0.2.0] - 2026-10-16
 
 ### Added
 
