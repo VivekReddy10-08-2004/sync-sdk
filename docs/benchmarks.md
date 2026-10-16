@@ -53,6 +53,19 @@ uv run --extra mysql python benchmarks/sync_throughput.py \
   --fail-on-errors --output benchmark-mysql.json
 ```
 
+Run the same workload against a MongoDB replica set or sharded cluster:
+
+```sh
+uv run --extra mongodb python benchmarks/sync_throughput.py \
+  --mongodb-url 'mongodb://localhost:27017/sync_benchmark_test?replicaSet=rs0' \
+  --mutations 5000 --warmup 500 --batch-size 100 --concurrency 8 \
+  --fail-on-errors --output benchmark-mongodb.json
+```
+
+The MongoDB adapter serializes batches inside one gateway process. This benchmark
+therefore measures its current queueing behavior; it does not simulate several
+gateway processes contending for the clock document.
+
 Keep the mutation count, batch size, concurrency, database resources, and host
 stable when comparing revisions. Run several trials and report the median.
 
@@ -97,7 +110,8 @@ benchmark.
 This result establishes a reproducible baseline and identifies SQLite write
 contention. It does not prove high-throughput scaling. That claim requires
 error-free PostgreSQL and MySQL results across increasing concurrency, followed
-by sustained and failure-injection runs. MongoDB is outside the current harness.
+by sustained and failure-injection runs. MongoDB requires the same tests plus a
+multi-process run because its in-process writer lock serializes this workload.
 
 ## Evidence required for a scaling claim
 

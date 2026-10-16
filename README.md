@@ -131,7 +131,7 @@ uv run --extra sqlite python benchmarks/sync_throughput.py \
 ```
 
 The [benchmark guide](docs/benchmarks.md) defines the metrics and scaling proof,
-and gives PostgreSQL and MySQL commands.
+and gives PostgreSQL, MySQL, and MongoDB commands.
 
 ## Choose your tables and fields
 

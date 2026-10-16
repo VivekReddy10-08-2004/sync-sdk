@@ -239,11 +239,54 @@ async def run_sql(args: argparse.Namespace) -> dict[str, Any]:
             Path(temporary_path).unlink(missing_ok=True)
 
 
+async def run_mongodb(args: argparse.Namespace) -> dict[str, Any]:
+    from pymongo import AsyncMongoClient
+
+    from sync_sdk.adapters.mongodb import MongoDBConfig
+
+    client: AsyncMongoClient[dict[str, Any]] = AsyncMongoClient(args.mongodb_url)
+    database = client.get_default_database()
+    if "test" not in database.name.lower():
+        raise ValueError("Benchmark database names must contain 'test'")
+
+    config = MongoDBConfig(metadata_prefix="sync_benchmark_")
+    config.register_collection(
+        "benchmark_items",
+        "sync_benchmark_items",
+        fields={"value": "value"},
+    )
+    try:
+        await client.drop_database(database.name)
+        await config.create_collections(database)
+        gateway = config.build(database)
+
+        async def count_rows() -> int:
+            return await database["sync_benchmark_items"].count_documents({})
+
+        return await benchmark(
+            gateway,
+            count_rows,
+            backend="mongodb",
+            mutation_count=args.mutations,
+            warmup_count=args.warmup,
+            batch_size=args.batch_size,
+            concurrency=args.concurrency,
+        )
+    finally:
+        await client.drop_database(database.name)
+        await client.close()
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
+    target = parser.add_mutually_exclusive_group()
+    target.add_argument(
         "--database-url",
         help="SQLAlchemy URL for an empty test database; defaults to temporary SQLite",
+    )
+    target.add_argument(
+        "--mongodb-url",
+        help="MongoDB URL containing an empty test database",
     )
     parser.add_argument("--mutations", type=int, default=5000)
     parser.add_argument("--warmup", type=int, default=500)
@@ -265,7 +308,7 @@ def parse_args() -> argparse.Namespace:
 
 async def main() -> None:
     args = parse_args()
-    report = await run_sql(args)
+    report = await run_mongodb(args) if args.mongodb_url else await run_sql(args)
     rendered = json.dumps(report, indent=2, sort_keys=True) + "\n"
     print(rendered, end="")
     if args.output is not None:

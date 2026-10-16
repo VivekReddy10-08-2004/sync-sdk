@@ -228,7 +228,7 @@ The workflow at `.github/workflows/database-adapters.yml`:
 1. Starts PostgreSQL, MySQL, and MongoDB.
 2. Installs the locked project dependencies.
 3. Runs the live database contract.
-4. Benchmarks PostgreSQL at concurrency 1, 2, 4, and 8.
+4. Benchmarks PostgreSQL, MySQL, and MongoDB at concurrency 1, 2, 4, and 8.
 5. Creates JSON timing and benchmark reports.
 6. Creates a JUnit test report.
 7. Adds the JSON reports to the GitHub Actions summary.
