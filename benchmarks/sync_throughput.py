@@ -114,7 +114,7 @@ async def benchmark(
     if warmup_count:
         _, _, warmup_applied, _, warmup_errors = await apply_batches(
             gateway,
-            mutations(0, warmup_count),
+            mutations(1, warmup_count),
             batch_size=batch_size,
             concurrency=concurrency,
         )
@@ -124,7 +124,7 @@ async def benchmark(
 
     elapsed, latencies, applied_count, failed_count, errors = await apply_batches(
         gateway,
-        mutations(warmup_count, mutation_count),
+        mutations(warmup_count + 1, mutation_count),
         batch_size=batch_size,
         concurrency=concurrency,
     )
