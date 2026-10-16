@@ -1,8 +1,8 @@
 # Throughput benchmarks
 
-The repository includes a repeatable benchmark for the SQL gateway and storage
-adapter. It measures independent create mutations in process, so it excludes
-HTTP handling, client networking, and synchronization over a real network.
+The repository includes a repeatable benchmark for the gateway and SQL or MongoDB
+storage adapter. It measures independent create mutations in process, so it
+excludes HTTP handling, client networking, and synchronization over a real network.
 
 The benchmark reports attempted and successful mutations per second, whole-batch
 latency, batch errors, and a post-run correctness audit. The audit checks the
@@ -11,9 +11,10 @@ A run passes only when every batch succeeds and the audit passes.
 
 ## Run it
 
-Use an empty test database. The benchmark removes its business table and the SDK
-metadata tables when it finishes. Never point it at a production or shared
-database. For PostgreSQL and MySQL, the database name must contain `test`.
+Use an empty test database. For SQL, the benchmark removes its business table and
+the SDK metadata tables when it finishes. For MongoDB, it drops the named database
+before and after the run. Never point it at a production or shared database. Every
+server database name must contain `test`.
 
 Run the local SQLite baseline:
 
@@ -41,8 +42,9 @@ uv run --extra postgres python benchmarks/sync_throughput.py \
 ```
 
 The Database adapters GitHub Actions workflow runs this benchmark against
-PostgreSQL 16 at concurrency 1, 2, 4, and 8. Each run must have zero errors and
-a passing correctness audit, and its raw JSON report is saved as an artifact.
+PostgreSQL 16, MySQL 8.4, and MongoDB 8.0 at concurrency 1, 2, 4, and 8. Each run
+must have zero errors and a passing correctness audit. Raw JSON is saved as an
+artifact.
 
 For MySQL, install the `mysql` extra and use an `asyncmy` URL:
 
@@ -69,25 +71,34 @@ gateway processes contending for the clock document.
 Keep the mutation count, batch size, concurrency, database resources, and host
 stable when comparing revisions. Run several trials and report the median.
 
-## PostgreSQL 16 CI result
+## Production adapter CI result
 
-The [GitHub Actions run](https://github.com/VivekReddy10-08-2004/sync-sdk/actions/runs/38650288099)
-measured PostgreSQL 16 on October 14, 2026. The runner used Linux x86-64,
-4 logical CPUs, and Python 3.12.3. Every run used 1,000 measured creates,
-100 warmup creates, and batches of 100.
+The [GitHub Actions run](https://github.com/VivekReddy10-08-2004/sync-sdk/actions/runs/38832020345)
+measured PostgreSQL 16, MySQL 8.4, and MongoDB 8.0 on October 15, 2026. Each runner
+used Linux x86-64, 4 logical CPUs, and Python 3.12.3. Every run used 1,000 measured
+creates, 100 warmup creates, and batches of 100.
 
-| Concurrency | Applied | Failed | Successful mutations/s | Mean batch latency | p95 batch latency | Audit |
-| ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| 1 | 1,000 | 0 | 409.20 | 244.368 ms | 259.650 ms | Passed |
-| 2 | 1,000 | 0 | 407.59 | 466.168 ms | 509.502 ms | Passed |
-| 4 | 1,000 | 0 | 401.97 | 849.518 ms | 1,013.146 ms | Passed |
-| 8 | 1,000 | 0 | 374.82 | 1,419.920 ms | 2,156.099 ms | Passed |
+| Backend | Concurrency | Successful mutations/s | Mean batch latency | p95 batch latency | Failed | Audit |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| PostgreSQL | 1 | 402.09 | 248.691 ms | 264.260 ms | 0 | Passed |
+| PostgreSQL | 2 | 409.36 | 464.870 ms | 502.169 ms | 0 | Passed |
+| PostgreSQL | 4 | 397.68 | 860.922 ms | 1,035.839 ms | 0 | Passed |
+| PostgreSQL | 8 | 368.33 | 1,429.084 ms | 2,468.786 ms | 0 | Passed |
+| MySQL | 1 | 348.27 | 287.123 ms | 301.210 ms | 0 | Passed |
+| MySQL | 2 | 283.73 | 677.228 ms | 1,098.866 ms | 0 | Passed |
+| MySQL | 4 | 336.17 | 1,019.327 ms | 1,234.713 ms | 0 | Passed |
+| MySQL | 8 | 347.02 | 1,501.963 ms | 2,321.811 ms | 0 | Passed |
+| MongoDB | 1 | 273.51 | 365.602 ms | 371.694 ms | 0 | Passed |
+| MongoDB | 2 | 270.17 | 703.119 ms | 749.807 ms | 0 | Passed |
+| MongoDB | 4 | 272.78 | 1,248.124 ms | 1,471.585 ms | 0 | Passed |
+| MongoDB | 8 | 270.24 | 1,928.515 ms | 2,961.846 ms | 0 | Passed |
 
-PostgreSQL handled every tested concurrency without mutation failures or partial
-writes. Throughput remained relatively flat and decreased at concurrency 8 while
-latency rose as writers waited for the shared clock. This proves reliable
-contention handling for this short workload; it does not prove horizontal write
-scaling or sustained-load capacity.
+All three adapters handled every tested concurrency without mutation failures or
+partial writes. Throughput stayed relatively flat while latency rose as writers
+waited for the shared clock. MongoDB also serializes writers with an in-process
+lock. These single short runs prove reliable in-process contention handling; they
+do not prove horizontal write scaling, multi-process MongoDB contention handling,
+or sustained-load capacity.
 
 ## Preliminary SQLite result
 

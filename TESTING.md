@@ -4,7 +4,7 @@
 
 - Package: `sync-sdk`
 - Version: `0.1.1`
-- Report date: October 14, 2026
+- Report date: October 15, 2026
 - Python used: 3.12.4
 
 This report states what was tested. It also states what is not included yet.
@@ -33,7 +33,7 @@ worked, and the installed version was `0.1.1`.
 | SQLite | 3.45.3 | `aiosqlite` | Passed |
 | PostgreSQL | 16.15 | `asyncpg` | Passed |
 | MySQL | 5.7.24 | `asyncmy` | Passed |
-| MongoDB | 8.0 CI target | PyMongo async | Live CI contract configured; local run skipped |
+| MongoDB | 8.0 CI target | PyMongo async | Passed in CI; local run skipped |
 
 The GitHub Actions database workflow is set to run PostgreSQL 16, MySQL 8.4, and
 MongoDB 8.0 as a single-node replica set. It starts clean database services for
@@ -191,12 +191,12 @@ Times change with the computer, database settings, connection distance, and load
 
 `benchmarks/sync_throughput.py` runs a configurable create workload, reports
 successful mutations per second and batch latency, and audits the stored rows and
-change feed afterward. PostgreSQL 16 applied all 4,000 measured mutations across
-concurrency 1, 2, 4, and 8 with zero failures; throughput ranged from 374.82 to
-409.20 mutations/s. The raw run, SQLite comparison, and reproduction commands are
-in the [throughput benchmark guide](docs/benchmarks.md). The measured database
-times above remain contract-test instrumentation and should not be compared as
-throughput results.
+change feed afterward. PostgreSQL 16, MySQL 8.4, and MongoDB 8.0 applied all
+12,000 measured mutations across concurrency 1, 2, 4, and 8 with zero failures.
+The [throughput benchmark guide](docs/benchmarks.md) contains the raw run link,
+complete comparison, SQLite result, and reproduction commands. The measured
+database times above remain contract-test instrumentation and should not be
+compared as throughput results.
 
 ## OpenTelemetry and SigNoz checks
 

@@ -118,11 +118,11 @@ JSON and JUnit reports.
 
 ## Benchmark gateway and storage throughput
 
-![PostgreSQL 16 benchmark: all mutations applied with zero failures from concurrency 1 through 8; throughput stayed between 374.82 and 409.20 mutations per second while p95 batch latency increased](docs/assets/postgresql-benchmark-summary.svg)
+![Backend benchmark: PostgreSQL, MySQL, and MongoDB applied all mutations without failures from concurrency 1 through 8; the chart compares concurrency 1 and 8 throughput and concurrency 8 p95 latency](docs/assets/backend-benchmark-comparison.svg)
 
-PostgreSQL applied every mutation at concurrency 1, 2, 4, and 8. Throughput held
-near 375–409 mutations/s, while rising latency shows queueing at the shared clock.
-Reproduce the baseline and save its JSON report:
+PostgreSQL, MySQL, and MongoDB applied every mutation at concurrency 1, 2, 4,
+and 8. Rising latency shows that batches queue behind each adapter's shared clock.
+Run a local SQLite smoke baseline and save its JSON report:
 
 ```sh
 uv run --extra sqlite python benchmarks/sync_throughput.py \
