@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13", "3.14"]
+
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.1.0
+        with:
+          version: "0.12.13"
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked --group dev --all-extras
+
+      - name: Run tests
+        run: uv run pytest -q
+
+      - name: Run Ruff
+        if: matrix.python-version == '3.12'
+        run: uv run ruff check src tests benchmarks
+
+      - name: Run mypy
+        if: matrix.python-version == '3.12'
+        env:
+          MYPYPATH: src
+        run: uv run mypy src benchmarks/sync_throughput.py
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.1.0
+        with:
+          version: "0.12.13"
+          python-version: "3.12"
+          enable-cache: true
+
+      - name: Build distributions
+        run: uv build --no-sources
+
+      - name: Check package metadata
+        run: uvx --from twine twine check dist/*
+
+      - name: Install and import wheel
+        run: |
+          uv venv /tmp/sync-sdk-wheel-check
+          uv pip install --python /tmp/sync-sdk-wheel-check/bin/python dist/*.whl
+          /tmp/sync-sdk-wheel-check/bin/python -c \
+            'import importlib.metadata as m; import sync_sdk; print(m.version("sync-sdk"))'
+
+      - name: Save distributions
+        uses: actions/upload-artifact@v7
+        with:
+          name: python-distributions
+          path: dist/*

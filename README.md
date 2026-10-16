@@ -2,6 +2,9 @@
 
 Send data collected offline to a central database.
 
+> **Beta:** Core durability and database guarantees are tested, but public APIs
+> may change before version 1.0.
+
 Your app chooses the database, tables, fields, and access rules. This SDK saves
 changes on the device, sends them when a connection is available, and tries again
 when sending fails. It can also bring server changes back to the device.
@@ -118,7 +121,7 @@ JSON and JUnit reports.
 
 ## Benchmark gateway and storage throughput
 
-![Backend benchmark: PostgreSQL, MySQL, and MongoDB applied all mutations without failures from concurrency 1 through 8; the chart compares concurrency 1 and 8 throughput and concurrency 8 p95 latency](docs/assets/backend-benchmark-comparison.svg)
+![Backend benchmark: PostgreSQL, MySQL, and MongoDB applied all mutations without failures from concurrency 1 through 8; the chart compares concurrency 1 and 8 throughput and concurrency 8 p95 latency](https://raw.githubusercontent.com/VivekReddy10-08-2004/sync-sdk/master/docs/assets/backend-benchmark-comparison.svg)
 
 PostgreSQL, MySQL, and MongoDB applied every mutation at concurrency 1, 2, 4,
 and 8. Rising latency shows that batches queue behind each adapter's shared clock.
@@ -130,8 +133,9 @@ uv run --extra sqlite python benchmarks/sync_throughput.py \
   --fail-on-errors --output benchmark-sqlite.json
 ```
 
-The [benchmark guide](docs/benchmarks.md) defines the metrics and scaling proof,
-and gives PostgreSQL, MySQL, and MongoDB commands.
+The [benchmark guide](https://github.com/VivekReddy10-08-2004/sync-sdk/blob/master/docs/benchmarks.md)
+defines the metrics and scaling proof, and gives PostgreSQL, MySQL, and MongoDB
+commands.
 
 ## Choose your tables and fields
 

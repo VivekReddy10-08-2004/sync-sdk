@@ -1,12 +1,24 @@
 [project]
 name = "sync-sdk"
-version = "0.1.1"
+version = "0.2.0"
 description = "Embeddable synchronization pipelines with pluggable storage and transports"
 readme = "README.md"
 authors = [
     { name = "VivekReddy10-08-2004", email = "vivek.bhimavarapu@maine.edu" }
 ]
 requires-python = ">=3.12"
+keywords = ["offline-first", "synchronization", "sqlite", "postgresql", "mongodb"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: AsyncIO",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
 dependencies = ["pydantic>=2.11.0"]
 
 [project.urls]
@@ -14,6 +26,8 @@ Homepage = "https://github.com/VivekReddy10-08-2004/sync-sdk"
 Repository = "https://github.com/VivekReddy10-08-2004/sync-sdk"
 Issues = "https://github.com/VivekReddy10-08-2004/sync-sdk/issues"
 "Test report" = "https://github.com/VivekReddy10-08-2004/sync-sdk/blob/master/TESTING.md"
+Changelog = "https://github.com/VivekReddy10-08-2004/sync-sdk/blob/master/CHANGELOG.md"
+Security = "https://github.com/VivekReddy10-08-2004/sync-sdk/security/policy"
 
 [project.optional-dependencies]
 http = ["httpx>=0.28.0"]
@@ -78,13 +92,15 @@ build-backend = "uv_build"
 
 [tool.uv.build-backend]
 source-include = [
+    "CHANGELOG.md",
+    "SECURITY.md",
     "TESTING.md",
     "docs/**",
     "tests/**",
     "benchmarks/**",
     "examples/**",
     'Architecture\ Diagram.png',
-    ".github/workflows/database-adapters.yml",
+    ".github/workflows/**",
 ]
 
 [tool.pytest.ini_options]

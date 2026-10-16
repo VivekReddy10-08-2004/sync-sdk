@@ -3,7 +3,7 @@
 ## Release
 
 - Package: `sync-sdk`
-- Version: `0.1.1`
+- Version: `0.2.0`
 - Report date: October 15, 2026
 - Python used: 3.12.4
 
@@ -20,11 +20,11 @@ The normal test suite collected 61 tests.
 
 A clean source package and wheel were built:
 
-- `sync_sdk-0.1.1.tar.gz`
-- `sync_sdk-0.1.1-py3-none-any.whl`
+- `sync_sdk-0.2.0.tar.gz`
+- `sync_sdk-0.2.0-py3-none-any.whl`
 
 The wheel was installed into a new Python environment. Importing `sync_sdk`
-worked, and the installed version was `0.1.1`.
+worked, and the installed version was `0.2.0`.
 
 ## Databases tested
 
@@ -83,7 +83,7 @@ The full suite also checks:
 - Monitoring failure isolation.
 - Old database migration data.
 
-## Why two tests are skipped
+## Why tests are skipped
 
 The SQL and document test stores share one contract.
 
@@ -95,6 +95,9 @@ Two checks only apply to SQL tables:
 Pytest runs those cases for the document store too. The document versions are
 skipped because a document store does not have SQL keys or SQL transactions.
 The SQL versions run and pass.
+
+The live MongoDB contract is also skipped locally when a replica-set URL is not
+configured. The database workflow supplies that service and runs the test.
 
 ## Test files
 
@@ -250,7 +253,7 @@ Create a clean environment and install the wheel:
 uv venv /tmp/sync-sdk-wheel-test --clear
 uv pip install \
   --python /tmp/sync-sdk-wheel-test/bin/python \
-  dist/sync_sdk-0.1.1-py3-none-any.whl
+  dist/sync_sdk-0.2.0-py3-none-any.whl
 /tmp/sync-sdk-wheel-test/bin/python -c \
   'import importlib.metadata as m; import sync_sdk; print(m.version("sync-sdk"))'
 ```
@@ -258,7 +261,7 @@ uv pip install \
 The last command should print:
 
 ```text
-0.1.1
+0.2.0
 ```
 
 ## What this proves
@@ -294,12 +297,13 @@ adapter that follows the storage contract.
 Complete these release steps:
 
 - Choose and add a license file.
-- Confirm that the PyPI project name is available.
+- Merge the release branch into `master` after every required check passes.
 - Publish the package to TestPyPI first.
 - Install the TestPyPI wheel into a clean environment.
 - Run the small example with that installed wheel.
 - Run the database workflow from a clean commit.
+- Configure the `pypi` GitHub environment and PyPI Trusted Publisher.
 - Create a version tag.
-- Use PyPI Trusted Publishing for the final upload.
+- Publish the GitHub release to trigger PyPI Trusted Publishing.
 
 Do not describe the timing table as a benchmark.

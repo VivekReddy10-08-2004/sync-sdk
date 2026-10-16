@@ -7,9 +7,15 @@ wheels/
 *.egg-info
 
 # Virtual environments
-.venv
-#Envoirnment files
+.venv/
 
-#md files
+# Environment and local database files
+.env
+.env.*
+!.env.example
+*.db
+*.db-*
+
+# Local planning files
 Next_Steps.md
 
