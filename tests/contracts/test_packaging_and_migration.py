@@ -17,7 +17,7 @@ def test_core_import_does_not_load_backend_or_web_packages():
 import sys
 class BlockAdapters:
     def find_spec(self, fullname, *args):
-        if fullname.split('.')[0] in {'sqlalchemy', 'fastapi', 'httpx', 'app', 'asyncpg', 'pydantic_settings', 'opentelemetry'}:
+        if fullname.split('.')[0] in {'sqlalchemy', 'fastapi', 'httpx', 'app', 'asyncpg', 'pydantic_settings', 'opentelemetry', 'pymongo'}:
             raise AssertionError('Unexpected core dependency: ' + fullname)
 sys.meta_path.insert(0, BlockAdapters())
 import sync_sdk

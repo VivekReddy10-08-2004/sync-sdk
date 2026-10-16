@@ -290,8 +290,8 @@ Tests cover repeated sends, competing writes, conflicts, failed groups of writes
 saved rejections, table creation, linked tables, direct calls, HTTP, and restarts.
 They also check that old database data still works after the update.
 
-The SQL adapter contract runs on SQLite, PostgreSQL, and MySQL. The GitHub Actions
-job starts real PostgreSQL and MySQL servers. It checks repeated sends, competing
-writes, conflicts, pulls, deletes, outside-write capture, health checks, and storage
-metrics. Ready-to-use NoSQL adapters, native transaction-log CDC, and automatic
-sending of existing rows still need separate work.
+The SQL adapter contract runs on SQLite, PostgreSQL, and MySQL. A production
+MongoDB adapter runs the same gateway rules with multi-document transactions on a
+replica set or sharded cluster. GitHub Actions exercises the adapters against live
+database servers. Native transaction-log CDC and automatic sending of existing
+rows still need separate work.

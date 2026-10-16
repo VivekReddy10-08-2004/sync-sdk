@@ -60,6 +60,38 @@ jobs:
           uv run pytest tests/integration/test_sql_database_adapters.py
           -q -s --junitxml=database-adapter-tests.xml
 
+      - name: Benchmark PostgreSQL throughput
+        env:
+          SYNC_TEST_POSTGRES_URL: postgresql+asyncpg://sync:sync@127.0.0.1:5432/sync_test
+        run: |
+          set -euo pipefail
+          for concurrency in 1 2 4 8; do
+            uv run python benchmarks/sync_throughput.py \
+              --database-url "$SYNC_TEST_POSTGRES_URL" \
+              --mutations 1000 \
+              --warmup 100 \
+              --batch-size 100 \
+              --concurrency "$concurrency" \
+              --fail-on-errors \
+              --output "benchmark-postgresql-c${concurrency}.json"
+          done
+
+      - name: Benchmark MySQL throughput
+        env:
+          SYNC_TEST_MYSQL_URL: mysql+asyncmy://sync:sync@127.0.0.1:3306/sync_test
+        run: |
+          set -euo pipefail
+          for concurrency in 1 2 4 8; do
+            uv run python benchmarks/sync_throughput.py \
+              --database-url "$SYNC_TEST_MYSQL_URL" \
+              --mutations 1000 \
+              --warmup 100 \
+              --batch-size 100 \
+              --concurrency "$concurrency" \
+              --fail-on-errors \
+              --output "benchmark-mysql-c${concurrency}.json"
+          done
+
       - name: Show metric report
         if: always()
         run: |
@@ -71,6 +103,16 @@ jobs:
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
           fi
+          for report in benchmark-*-c*.json; do
+            if test -f "$report"; then
+              {
+                echo "## $report"
+                echo '```json'
+                cat "$report"
+                echo '```'
+              } >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
 
       - name: Save test reports
         if: always()
@@ -80,4 +122,83 @@ jobs:
           path: |
             database-adapter-metrics.json
             database-adapter-tests.xml
+            benchmark-*-c*.json
+          if-no-files-found: ignore
+
+  live-mongodb:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.1.0
+        with:
+          version: "0.12.13"
+          enable-cache: true
+
+      - name: Start MongoDB replica set
+        run: |
+          docker run --detach --name sync-mongodb --publish 27017:27017 \
+            mongo:8.0 --replSet rs0 --bind_ip_all
+          for attempt in $(seq 1 60); do
+            docker exec sync-mongodb mongosh --quiet \
+              --eval 'db.adminCommand({ping: 1}).ok' >/dev/null 2>&1 && break
+            test "$attempt" -lt 60 || exit 1
+            sleep 1
+          done
+          docker exec sync-mongodb mongosh --quiet --eval \
+            'rs.initiate({_id: "rs0", members: [{_id: 0, host: "localhost:27017"}]})'
+          for attempt in $(seq 1 60); do
+            docker exec sync-mongodb mongosh --quiet \
+              --eval 'db.hello().isWritablePrimary' | grep -q true && break
+            test "$attempt" -lt 60 || exit 1
+            sleep 1
+          done
+
+      - name: Install test dependencies
+        run: uv sync --locked --group dev --extra mongodb
+
+      - name: Test MongoDB adapter
+        env:
+          SYNC_TEST_MONGODB_URL: "mongodb://127.0.0.1:27017/sync_test?replicaSet=rs0&directConnection=true"
+        run: >-
+          uv run pytest tests/integration/test_mongodb_adapter.py
+          -q --junitxml=mongodb-adapter-tests.xml
+
+      - name: Benchmark MongoDB throughput
+        env:
+          SYNC_TEST_MONGODB_URL: "mongodb://127.0.0.1:27017/sync_test?replicaSet=rs0&directConnection=true"
+        run: |
+          set -euo pipefail
+          for concurrency in 1 2 4 8; do
+            uv run python benchmarks/sync_throughput.py \
+              --mongodb-url "$SYNC_TEST_MONGODB_URL" \
+              --mutations 1000 \
+              --warmup 100 \
+              --batch-size 100 \
+              --concurrency "$concurrency" \
+              --fail-on-errors \
+              --output "benchmark-mongodb-c${concurrency}.json"
+          done
+
+      - name: Show MongoDB benchmark reports
+        if: always()
+        run: |
+          for report in benchmark-mongodb-c*.json; do
+            if test -f "$report"; then
+              {
+                echo "## $report"
+                echo '```json'
+                cat "$report"
+                echo '```'
+              } >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
+
+      - name: Save MongoDB test report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mongodb-adapter-report
+          path: |
+            mongodb-adapter-tests.xml
+            benchmark-mongodb-c*.json
           if-no-files-found: ignore

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="350" viewBox="0 0 900 350" role="img" aria-labelledby="title description">
+  <title id="title">PostgreSQL 16 throughput by concurrency</title>
+  <desc id="description">PostgreSQL applied all 1000 mutations with zero failures at concurrency 1, 2, 4, and 8. Throughput ranged from 374.82 to 409.20 mutations per second while p95 batch latency increased from 259.65 to 2156.10 milliseconds.</desc>
+  <rect width="900" height="350" rx="14" fill="#ffffff"/>
+  <rect x="1" y="1" width="898" height="348" rx="13" fill="none" stroke="#d7dde8" stroke-width="2"/>
+  <text x="32" y="38" fill="#172033" font-family="Arial, sans-serif" font-size="20" font-weight="700">PostgreSQL 16 concurrency test</text>
+  <text x="32" y="61" fill="#596579" font-family="Arial, sans-serif" font-size="13">1,000 measured creates per run · batch size 100 · GitHub Actions · October 14, 2026</text>
+  <text x="32" y="96" fill="#172033" font-family="Arial, sans-serif" font-size="15" font-weight="700">Successful throughput</text>
+  <text x="32" y="117" fill="#596579" font-family="Arial, sans-serif" font-size="12">mutations per second</text>
+  <text x="32" y="151" fill="#172033" font-family="Arial, sans-serif" font-size="13">C1</text>
+  <rect x="67" y="137" width="263" height="18" rx="4" fill="#2563eb"/>
+  <text x="338" y="151" fill="#172033" font-family="Arial, sans-serif" font-size="12" font-weight="700">409.20</text>
+  <text x="32" y="190" fill="#172033" font-family="Arial, sans-serif" font-size="13">C2</text>
+  <rect x="67" y="176" width="262" height="18" rx="4" fill="#2563eb"/>
+  <text x="337" y="190" fill="#172033" font-family="Arial, sans-serif" font-size="12" font-weight="700">407.59</text>
+  <text x="32" y="229" fill="#172033" font-family="Arial, sans-serif" font-size="13">C4</text>
+  <rect x="67" y="215" width="258" height="18" rx="4" fill="#2563eb"/>
+  <text x="333" y="229" fill="#172033" font-family="Arial, sans-serif" font-size="12" font-weight="700">401.97</text>
+  <text x="32" y="268" fill="#172033" font-family="Arial, sans-serif" font-size="13">C8</text>
+  <rect x="67" y="254" width="241" height="18" rx="4" fill="#2563eb"/>
+  <text x="316" y="268" fill="#172033" font-family="Arial, sans-serif" font-size="12" font-weight="700">374.82</text>
+  <line x1="449" y1="84" x2="449" y2="286" stroke="#d7dde8"/>
+  <text x="480" y="96" fill="#172033" font-family="Arial, sans-serif" font-size="15" font-weight="700">p95 batch latency</text>
+  <text x="480" y="117" fill="#596579" font-family="Arial, sans-serif" font-size="12">milliseconds per 100-mutation batch</text>
+  <text x="480" y="151" fill="#172033" font-family="Arial, sans-serif" font-size="13">C1</text>
+  <rect x="515" y="137" width="32" height="18" rx="4" fill="#7c3aed"/>
+  <text x="555" y="151" fill="#172033" font-family="Arial, sans-serif" font-size="12" font-weight="700">259.65 ms</text>
+  <text x="480" y="190" fill="#172033" font-family="Arial, sans-serif" font-size="13">C2</text>
+  <rect x="515" y="176" width="63" height="18" rx="4" fill="#7c3aed"/>
+  <text x="586" y="190" fill="#172033" font-family="Arial, sans-serif" font-size="12" font-weight="700">509.50 ms</text>
+  <text x="480" y="229" fill="#172033" font-family="Arial, sans-serif" font-size="13">C4</text>
+  <rect x="515" y="215" width="124" height="18" rx="4" fill="#7c3aed"/>
+  <text x="647" y="229" fill="#172033" font-family="Arial, sans-serif" font-size="12" font-weight="700">1,013.15 ms</text>
+  <text x="480" y="268" fill="#172033" font-family="Arial, sans-serif" font-size="13">C8</text>
+  <rect x="515" y="254" width="265" height="18" rx="4" fill="#7c3aed"/>
+  <text x="788" y="268" fill="#172033" font-family="Arial, sans-serif" font-size="12" font-weight="700">2,156.10 ms</text>
+  <rect x="32" y="301" width="816" height="30" rx="6" fill="#ecfdf3"/>
+  <text x="440" y="321" fill="#166534" font-family="Arial, sans-serif" font-size="13" font-weight="700" text-anchor="middle">All 4,000 measured mutations applied · zero failures · all correctness audits passed</text>
+</svg>

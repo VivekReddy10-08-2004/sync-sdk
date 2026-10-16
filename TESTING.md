@@ -3,27 +3,28 @@
 ## Release
 
 - Package: `sync-sdk`
-- Version: `0.1.1`
-- Report date: September 15, 2026
+- Version: `0.2.0`
+- Report date: October 16, 2026
 - Python used: 3.12.4
 
 This report states what was tested. It also states what is not included yet.
 
 ## Result
 
-The normal test suite collected 54 tests.
+The normal test suite collected 61 tests.
 
-- 52 passed.
-- 2 were skipped as expected.
+- 58 passed.
+- 3 were skipped as expected, including the live MongoDB test because Docker and
+  `SYNC_TEST_MONGODB_URL` were unavailable locally.
 - 0 failed.
 
 A clean source package and wheel were built:
 
-- `sync_sdk-0.1.1.tar.gz`
-- `sync_sdk-0.1.1-py3-none-any.whl`
+- `sync_sdk-0.2.0.tar.gz`
+- `sync_sdk-0.2.0-py3-none-any.whl`
 
 The wheel was installed into a new Python environment. Importing `sync_sdk`
-worked, and the installed version was `0.1.1`.
+worked, and the installed version was `0.2.0`.
 
 ## Databases tested
 
@@ -32,9 +33,11 @@ worked, and the installed version was `0.1.1`.
 | SQLite | 3.45.3 | `aiosqlite` | Passed |
 | PostgreSQL | 16.15 | `asyncpg` | Passed |
 | MySQL | 5.7.24 | `asyncmy` | Passed |
+| MongoDB | 8.0 CI target | PyMongo async | Passed in CI; local run skipped |
 
-The GitHub Actions database job is also set to run PostgreSQL 16 and MySQL 8.4.
-It starts clean database services for every run.
+The GitHub Actions database workflow is set to run PostgreSQL 16, MySQL 8.4, and
+MongoDB 8.0 as a single-node replica set. It starts clean database services for
+every run.
 
 The same adapter contract runs against each database. The application table and
 the SDK tracking tables are created before the test and removed after the test.
@@ -80,7 +83,7 @@ The full suite also checks:
 - Monitoring failure isolation.
 - Old database migration data.
 
-## Why two tests are skipped
+## Why tests are skipped
 
 The SQL and document test stores share one contract.
 
@@ -93,6 +96,9 @@ Pytest runs those cases for the document store too. The document versions are
 skipped because a document store does not have SQL keys or SQL transactions.
 The SQL versions run and pass.
 
+The live MongoDB contract is also skipped locally when a replica-set URL is not
+configured. The database workflow supplies that service and runs the test.
+
 ## Test files
 
 | File | Purpose |
@@ -103,7 +109,9 @@ The SQL versions run and pass.
 | `tests/integration/test_sync_api.py` | FastAPI mutation and change routes |
 | `tests/integration/test_reliability.py` | Offline work, retries, restart, crash, and resume |
 | `tests/integration/test_sql_database_adapters.py` | Live SQLite, PostgreSQL, and MySQL contract |
+| `tests/integration/test_mongodb_adapter.py` | Live MongoDB adapter contract |
 | `tests/test_observability.py` | Metrics, traces, and monitoring failures |
+| `benchmarks/sync_throughput.py` | Repeatable SQL gateway and storage throughput workload |
 
 ## Run the normal tests
 
@@ -122,7 +130,7 @@ uv run pytest -q
 Expected result for this release:
 
 ```text
-52 passed, 2 skipped
+58 passed, 3 skipped
 ```
 
 ## Run the live database tests
@@ -182,6 +190,17 @@ Each database produced:
 
 Times change with the computer, database settings, connection distance, and load.
 
+## Throughput benchmark
+
+`benchmarks/sync_throughput.py` runs a configurable create workload, reports
+successful mutations per second and batch latency, and audits the stored rows and
+change feed afterward. PostgreSQL 16, MySQL 8.4, and MongoDB 8.0 applied all
+12,000 measured mutations across concurrency 1, 2, 4, and 8 with zero failures.
+The [throughput benchmark guide](docs/benchmarks.md) contains the raw run link,
+complete comparison, SQLite result, and reproduction commands. The measured
+database times above remain contract-test instrumentation and should not be
+compared as throughput results.
+
 ## OpenTelemetry and SigNoz checks
 
 The SQL adapter records these metrics:
@@ -209,13 +228,14 @@ See the [OpenTelemetry and SigNoz guide](docs/observability.md) for setup steps.
 
 The workflow at `.github/workflows/database-adapters.yml`:
 
-1. Starts PostgreSQL and MySQL.
+1. Starts PostgreSQL, MySQL, and MongoDB.
 2. Installs the locked project dependencies.
 3. Runs the live database contract.
-4. Creates a JSON timing report.
-5. Creates a JUnit test report.
-6. Adds the JSON report to the GitHub Actions summary.
-7. Saves both reports as a workflow artifact.
+4. Benchmarks PostgreSQL, MySQL, and MongoDB at concurrency 1, 2, 4, and 8.
+5. Creates JSON timing and benchmark reports.
+6. Creates a JUnit test report.
+7. Adds the JSON reports to the GitHub Actions summary.
+8. Saves the reports as a workflow artifact.
 
 The job runs for pull requests, pushes to `master`, and manual runs.
 
@@ -233,7 +253,7 @@ Create a clean environment and install the wheel:
 uv venv /tmp/sync-sdk-wheel-test --clear
 uv pip install \
   --python /tmp/sync-sdk-wheel-test/bin/python \
-  dist/sync_sdk-0.1.1-py3-none-any.whl
+  dist/sync_sdk-0.2.0-py3-none-any.whl
 /tmp/sync-sdk-wheel-test/bin/python -c \
   'import importlib.metadata as m; import sync_sdk; print(m.version("sync-sdk"))'
 ```
@@ -241,13 +261,18 @@ uv pip install \
 The last command should print:
 
 ```text
-0.1.1
+0.2.0
 ```
 
 ## What this proves
 
 The tested SQL adapter can apply the same sync rules on SQLite, PostgreSQL, and
 MySQL.
+
+The MongoDB contract checks idempotency, competing versions, ordered pulls,
+deletes, private-field preservation, failed-transaction rollback, and health
+against a replica set. It is skipped when `SYNC_TEST_MONGODB_URL` is absent; the
+database workflow supplies that URL and starts a clean replica set.
 
 Developers can register their own SQLAlchemy tables and choose which fields are
 synced. The SDK owns only its tracking tables. The application still owns its
@@ -258,7 +283,7 @@ adapter that follows the storage contract.
 
 ## Current limits
 
-- There is no ready-to-use MongoDB or other NoSQL driver.
+- MongoDB is the only ready-to-use NoSQL adapter.
 - The in-memory document adapter is test code only.
 - Existing database rows are not sent automatically.
 - SQL change capture polls full registered tables; native transaction-log CDC is
@@ -271,14 +296,13 @@ adapter that follows the storage contract.
 
 Complete these release steps:
 
-- Choose and add a license file.
-- Confirm that the PyPI project name is available.
+- Merge the release branch into `master` after every required check passes.
 - Publish the package to TestPyPI first.
 - Install the TestPyPI wheel into a clean environment.
 - Run the small example with that installed wheel.
 - Run the database workflow from a clean commit.
+- Configure the `pypi` GitHub environment and PyPI Trusted Publisher.
 - Create a version tag.
-- Use PyPI Trusted Publishing for the final upload.
+- Publish the GitHub release to trigger PyPI Trusted Publishing.
 
-Do not describe this release as supporting a ready-made NoSQL database adapter.
 Do not describe the timing table as a benchmark.
