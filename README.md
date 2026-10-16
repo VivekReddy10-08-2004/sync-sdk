@@ -1,30 +1,59 @@
 # Sync SDK
 
-Send data collected offline to a central database.
+Send changes made offline to a central database, retry safely after connection
+failures, and pull server changes back to the device.
 
-> **Beta:** Core durability and database guarantees are tested, but public APIs
-> may change before version 1.0.
+> **Beta:** Core durability and database guarantees are tested. Public APIs may
+> change before version 1.0.
 
-Your app chooses the database, tables, fields, and access rules. This SDK saves
-changes on the device, sends them when a connection is available, and tries again
-when sending fails. It can also bring server changes back to the device.
+Your application chooses the records, fields, database, authentication, and access
+rules. Sync SDK supplies the durable device outbox, synchronization loop, gateway,
+conflict checks, and database adapters.
 
-# Using Sync SDK in an existing application
+## Try it locally
 
-You need three pieces:
+Run the complete pipeline against temporary SQLite databases:
 
-SERVER
-1. Register the tables you want synced.
-2. Build a gateway.
-3. Mount the FastAPI routes.
+```sh
+uv sync --extra sqlite
+uv run --extra sqlite python examples/pluggable_tasks.py
+```
 
-CLIENT
-4. Open a local SQLiteStore.
-5. Create a SyncClient pointed at the server.
-6. Call enqueue() whenever your app changes synced data.
+The example registers a task table, queues one offline change, synchronizes it
+through an in-process gateway, and prints the device and server records. It removes
+its temporary files when finished. See the
+[example source](https://github.com/VivekReddy10-08-2004/sync-sdk/blob/master/examples/pluggable_tasks.py).
 
-WORKER
-7. Run sync.run() while your app is active.
+## Install
+
+Install the transport, server integration, and database adapter your application
+uses:
+
+```sh
+# Recommended production gateway
+pip install 'sync-sdk[http,fastapi,postgres]'
+
+# Other supported gateway databases
+pip install 'sync-sdk[http,fastapi,mysql]'
+pip install 'sync-sdk[http,fastapi,mongodb]'
+
+# Local development or a small single-instance gateway
+pip install 'sync-sdk[http,fastapi,sqlite]'
+
+# Optional OpenTelemetry support
+pip install 'sync-sdk[http,fastapi,postgres,observability]'
+```
+
+Python 3.12 or newer is required. The device outbox uses Python's built-in SQLite
+support. You provide the gateway database connection and credentials.
+
+## Integration overview
+
+| Part | What you add |
+| --- | --- |
+| Server | Register records, build a gateway, and mount its routes. |
+| Device | Open the store, create the client, and enqueue changes. |
+| Worker | Run continuously or schedule one synchronization cycle. |
 
 ## How it works
 
@@ -35,7 +64,7 @@ flowchart TB
         app["Application"]
         client["SyncClient<br/>enqueue · sync_once · run"]
         local[("SQLiteStore<br/>outbox · synced records<br/>cursor · retry state")]
-        local_note["enqueue writes the outbox only<br/>pulled records + cursor commit atomically"]
+        local_note["enqueue: outbox only<br/>pull: records + cursor atomically"]
 
         app -->|"enqueue mutation"| client
         client -->|"durable enqueue<br/>acknowledge · retry state"| local
@@ -46,7 +75,7 @@ flowchart TB
 
     subgraph transport["Transport"]
         direction LR
-        http["HTTPTransport<br/>POST mutations · GET changes<br/>retry connection, 408, 429, 5xx"]
+        http["HTTPTransport<br/>push · pull<br/>retry transient failures"]
         network["Network<br/>offline · timeout · lost response"]
     end
 
@@ -84,106 +113,194 @@ flowchart TB
     http --- retry
 ```
 
-1. Your app adds a change to a local queue, called the **outbox**.
-2. The SDK saves that change before returning to your app.
-3. The client sends queued changes to the **gateway**, the server part of the SDK.
-4. The gateway validates the batch and commits business writes, mutation results,
-   versions, and change-feed entries in one database transaction.
-5. The client saves each result in its outbox, then pulls change-feed pages.
-6. Each pulled page updates local records and its cursor in one SQLite transaction.
-7. Retryable failures leave mutations pending with the same IDs, so an uncertain
-   response can be replayed safely.
-8. After a restart, the client resumes from its saved outbox and cursor state.
+1. The application queues a mutation in the device outbox.
+2. The client sends pending mutations in bounded FIFO batches.
+3. The gateway validates a batch and applies it in one database transaction.
+4. Each mutation result is saved for idempotent replay. Accepted changes also enter
+   the ordered server feed.
+5. The device acknowledges outbox results and pulls feed pages after its cursor.
+6. Each page updates local records and its cursor in one SQLite transaction.
+7. After a failure or restart, synchronization resumes from the saved outbox,
+   retry state, and cursor.
 
-Each change has its own ID. Sending that same change again does not apply it twice.
+## Add Sync SDK to an application
 
-## Try the example
+The following path uses PostgreSQL or another SQLAlchemy-supported backend. See
+the [MongoDB guide](https://github.com/VivekReddy10-08-2004/sync-sdk/blob/master/docs/mongodb.md)
+for document collection mapping.
 
-From this project folder, run:
+### 1. Register records and fields
 
-```sh
-uv sync --extra gateway
-uv run --extra sqlite python examples/pluggable_tasks.py
+Use a new SQLAlchemy table or one your application already owns:
+
+```python
+from sqlalchemy import Column, Integer, MetaData, String, Table
+from sync_sdk.adapters.sqlalchemy_config import SQLAlchemyConfig
+
+metadata = MetaData()
+tasks = Table(
+    "my_tasks",
+    metadata,
+    Column("id", Integer, primary_key=True),
+    Column("title", String(200), nullable=False),
+    Column("private_note", String(200), server_default="private"),
+)
+
+config = SQLAlchemyConfig()
+task_binding = config.register_table(
+    "tasks",
+    tasks,
+    fields={"title": "title"},
+)
 ```
 
-The example creates a task table, sends one task through the pipeline, and prints
-the saved data. It uses temporary files and removes them when it finishes.
+`tasks` is the name sent over sync, while `my_tasks` is the database table.
+Only `title` is synchronized; `private_note` stays on the server. If `fields` is
+omitted, every non-key column is included.
 
-See [the example code](https://github.com/VivekReddy10-08-2004/sync-sdk/blob/master/examples/pluggable_tasks.py).
+### 2. Initialize storage and build the gateway
 
-## Choose what to install
+```python
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-Install only the parts your app needs:
+engine = create_async_engine("postgresql+asyncpg://user:pass@localhost/app")
+sessions = async_sessionmaker(engine, expire_on_commit=False)
 
-```sh
-# HTTP, FastAPI, and PostgreSQL support
-pip install 'sync-sdk[http,fastapi,postgres]'
-
-# HTTP, FastAPI, and SQLite support
-pip install 'sync-sdk[http,fastapi,sqlite]'
-
-# HTTP, FastAPI, and MySQL support
-pip install 'sync-sdk[http,fastapi,mysql]'
-
-# HTTP, FastAPI, and MongoDB support
-pip install 'sync-sdk[http,fastapi,mongodb]'
-
-# Add OpenTelemetry and SigNoz support
-pip install 'sync-sdk[http,fastapi,postgres,observability]'
+await config.create_tables(engine)
+gateway = config.build(sessions)
 ```
 
-The base package needs Pydantic, which checks data types. The local SQLite queue
-uses Python's built-in SQLite support.
+`create_tables()` creates registered tables that are missing and the SDK tracking
+tables. It does not alter existing tables. Use application migrations for schema
+changes. If the application already creates its business tables, initialize only
+the SDK metadata:
 
-You supply the database connection. The SDK does not choose your database or
-manage its login details.
+```python
+from sync_sdk.adapters.sqlalchemy import initialize_sync_metadata
 
-## Test database adapters
-
-The normal test run checks the SQL adapter with SQLite:
-
-```sh
-uv run pytest tests/integration/test_sql_database_adapters.py -q
+await initialize_sync_metadata(engine)
 ```
 
-You can run the same test against PostgreSQL or MySQL. Use empty test databases.
-Their names must contain `test`. The test creates tables and removes them.
+Run initialization once before starting sync workers.
 
-```sh
-SYNC_TEST_POSTGRES_URL='postgresql+asyncpg://user:pass@localhost/sync_test' \
-uv run pytest tests/integration/test_sql_database_adapters.py -q
+### 3. Mount the gateway routes
 
-SYNC_TEST_MYSQL_URL='mysql+asyncmy://user:pass@localhost/sync_test' \
-uv run pytest tests/integration/test_sql_database_adapters.py -q
+```python
+from fastapi import FastAPI
+from sync_sdk.integrations.fastapi import create_sync_router
+
+app = FastAPI()
+app.include_router(create_sync_router(lambda: gateway, prefix="/v1/sync"))
 ```
 
-Set both values to test both servers in one run.
+The host application must authenticate these routes and enforce authorization and
+tenant isolation. A gateway exposes the full change feed of its configured store.
 
-Run the MongoDB contract against an empty test database on a replica set or
-sharded cluster. Its database name must contain `test`:
+### 4. Queue and synchronize device changes
 
-```sh
-SYNC_TEST_MONGODB_URL='mongodb://localhost:27017/sync_test?replicaSet=rs0' \
-uv run --extra mongodb pytest tests/integration/test_mongodb_adapter.py -q
+```python
+import httpx
+from sync_sdk import SQLiteStore, SyncClient
+from sync_sdk.adapters.http import HTTPTransport
+
+with SQLiteStore("device.db", client_id="device-1") as local:
+    async with httpx.AsyncClient(
+        base_url="https://api.example.com",
+        timeout=10,
+    ) as http:
+        sync = SyncClient(local, transport=HTTPTransport(http))
+        sync.enqueue(
+            entity="tasks",
+            entity_id="1",
+            operation="create",
+            payload={"title": "Offline edit"},
+            base_version=0,
+        )
+        report = await sync.sync_once()
+        print(report, local.results())
 ```
 
-The full test method, verified database versions, measured times, package checks,
-limits, and release steps are in the
-[testing and verification report](https://github.com/VivekReddy10-08-2004/sync-sdk/blob/master/TESTING.md).
-This full link also works from the PyPI page.
+Call `enqueue()` once for every application change. Do not enqueue the same logical
+change again after a send failure; the pending mutation keeps its stable ID and is
+retried safely.
 
-Set `SYNC_TEST_METRICS_PATH=database-adapter-metrics.json` to save transaction,
-pull, and health-check times for each database. The Database adapters GitHub
-Actions workflow starts real PostgreSQL, MySQL, and MongoDB servers and saves its
-JSON and JUnit reports.
+`sync_once()` performs a bounded amount of push and pull work. Use the continuous
+worker during the application lifetime:
 
-## Benchmark gateway and storage throughput
+```python
+await sync.run(poll_interval=1)
+```
+
+Reopen the same SQLite file with the same client ID after a restart. Use one sync
+worker per local file, on the thread that opened it. `DirectTransport(gateway)` can
+replace HTTP when the client and gateway run in the same process.
+
+## Consistency and failure behavior
+
+| Behavior | Guarantee |
+| --- | --- |
+| Local enqueue | The mutation commits to SQLite before `enqueue()` returns. |
+| Lost response | The mutation remains pending and replays with the same ID. |
+| Duplicate ID | Stored results prevent duplicate application. |
+| Gateway batch | Data and sync metadata commit or roll back together. |
+| Feed order | Sequences are strictly increasing and commit-ordered. |
+| Device checkpoint | Pulled records, deletes, and the cursor commit together. |
+
+`base_version` is the last server version known by the application. A different
+server version returns `conflict`; omitting `base_version` skips the default
+version check. Results are `applied`, `conflict`, or `rejected`. The latter two are
+acknowledged and require the application to create a new mutation after resolving
+the problem.
+
+Connection failures, HTTP 408/429, and 5xx responses schedule a retry with
+exponential backoff and jitter. `Retry-After` can extend the wait. Other errors are
+raised to the application.
+
+The local record view contains changes pulled from the server. `enqueue()` does
+not apply an optimistic update to that view; applications that need immediate
+local UI changes should maintain their own local state.
+
+## Capture writes made directly to SQL
+
+The optional SQL change-capture worker detects committed inserts, updates, and
+deletes made outside the gateway, including selected trigger effects and cascading
+deletes:
+
+```python
+import asyncio
+
+capture = config.build_change_capture(sessions)
+await capture.capture_once()  # establish a baseline; existing rows are not emitted
+capture_task = asyncio.create_task(capture.run(interval=1.0))
+```
+
+The worker polls the selected fields of every registered table. Multiple writes to
+one row between scans appear as one final-state change. Large or high-write tables
+may need a native transaction-log CDC adapter instead. MongoDB direct writes are
+not captured by this SQL worker.
+
+## Choose a gateway database
+
+| Backend | Recommended use | Requirement |
+| --- | --- | --- |
+| PostgreSQL | Production default | Row locking and transactions |
+| MySQL | Existing MySQL deployments | Transactional engine |
+| MongoDB | Document applications | Replica set or sharded cluster |
+| SQLite | Development and small gateways | One local file |
+
+Every adapter implements the same gateway contract. SQL and MongoDB adapters
+serialize sequence allocation so a cursor cannot skip a late-committing change.
+This favors correctness over maximum concurrent write throughput.
+
+## Performance evidence
 
 ![Backend benchmark: PostgreSQL, MySQL, and MongoDB applied all mutations without failures from concurrency 1 through 8; the chart compares concurrency 1 and 8 throughput and concurrency 8 p95 latency](https://raw.githubusercontent.com/VivekReddy10-08-2004/sync-sdk/258bad0235bb9a0056b9a36bbdb31fc63ea13b0a/docs/assets/backend-benchmark-comparison.svg)
 
-PostgreSQL, MySQL, and MongoDB applied every mutation at concurrency 1, 2, 4,
-and 8. Rising latency shows that batches queue behind each adapter's shared clock.
-Run a local SQLite smoke baseline and save its JSON report:
+PostgreSQL 16, MySQL 8.4, and MongoDB 8.0 applied all 12,000 measured mutations
+across concurrency levels 1, 2, 4, and 8 with zero failures. Rising latency shows
+batches queuing behind each adapter's shared sequence clock.
+
+Run a SQLite smoke benchmark:
 
 ```sh
 uv run --extra sqlite python benchmarks/sync_throughput.py \
@@ -192,281 +309,76 @@ uv run --extra sqlite python benchmarks/sync_throughput.py \
 ```
 
 The [benchmark guide](https://github.com/VivekReddy10-08-2004/sync-sdk/blob/master/docs/benchmarks.md)
-defines the metrics and scaling proof, and gives PostgreSQL, MySQL, and MongoDB
-commands.
+defines the metrics, environment, correctness audit, and commands for every
+backend.
 
-## Choose your tables and fields
+## Observability
 
-You can use new tables or tables your app already has. This example uses SQLAlchemy
-to describe a table:
-
-```python
-from sqlalchemy import Column, Integer, MetaData, String, Table
-from sync_sdk.adapters.sqlalchemy_config import SQLAlchemyConfig
-
-metadata = MetaData()
-tasks = Table(
-    "my_tasks", metadata,
-    Column("id", Integer, primary_key=True),
-    Column("title", String(200), nullable=False),
-    Column("private_note", String(200), server_default="private"),
-)
-
-config = SQLAlchemyConfig()
-task_binding = config.register_table(
-    "tasks", tasks, fields={"title": "title"},
-)
-```
-
-Here is what each part means:
-
-- `my_tasks` is the database table name.
-- `tasks` is the name your app uses when sending a change.
-- `id` identifies a row.
-- `fields` chooses which values to send and which columns receive them.
-- `private_note` stays in the database. It is not sent through sync.
-
-In `fields={"title": "title"}`, the left name is the data field and the right name
-is the database column. The names can differ.
-
-If you leave out `fields`, every column except the row's key is included. You can
-also pass an existing model's table, such as `Task.__table__`.
-
-## Create the tables and build the gateway
-
-Run this inside your async app. `engine` is your SQLAlchemy database connection
-manager. `sessions` is your app's async session factory, which opens database
-sessions. The [example](https://github.com/VivekReddy10-08-2004/sync-sdk/blob/master/examples/pluggable_tasks.py) shows how to create both.
-
-```python
-await config.create_tables(engine)
-gateway = config.build(sessions)
-```
-
-`register_table()` and `build()` do not change the database.
-
-`create_tables()` creates the tables you registered and the SDK's tracking tables.
-It leaves existing tables alone. It does not add columns to an existing table or
-create other tables that you did not register.
-
-Run table setup before starting sync workers. Use your app's database migration
-tool when you need to change an existing table.
-
-If your app already creates its own tables, create only the SDK tracking tables:
-
-```python
-from sync_sdk.adapters.sqlalchemy import initialize_sync_metadata
-
-await initialize_sync_metadata(engine)
-```
-
-## Capture writes made directly to the database
-
-The optional SQL change-capture worker detects inserts, updates, and deletes made
-outside the gateway, including trigger side effects and cascading deletes on
-registered tables. It polls only the fields selected by `register_table()` and
-adds detected changes to the same ordered feed as normal sync writes.
-
-Build it from the same configuration and session factory as the gateway:
-
-```python
-import asyncio
-
-capture = config.build_change_capture(sessions)
-
-# Establish the durable baseline before accepting outside writes. Existing rows
-# are recorded here but are not sent to clients as new changes.
-await capture.capture_once()
-
-# Keep this task for your application's lifetime and cancel it during shutdown.
-capture_task = asyncio.create_task(capture.run(interval=1.0))
-```
-
-`capture_once()` can also be called by an existing scheduler. It returns a report
-with `scanned_rows`, `captured_changes`, and `initialized_entities`. Repeated or
-concurrent scans are safe; one worker is normally enough. If a database row does
-not satisfy its registered schema, the scan fails without advancing its snapshot.
-
-Capture state is stored in `sync_capture_checkpoints` and `sync_captured_rows`.
-Applications that manage SDK tables with migrations must add both tables before
-starting the worker. Polling scans each registered table, so choose an interval
-that fits the table sizes and write rate. Multiple writes to one row between scans
-are captured as one change containing the final state.
-
-## Add sync routes to your app
-
-For FastAPI:
-
-```python
-from sync_sdk.integrations.fastapi import create_sync_router
-
-app.include_router(create_sync_router(lambda: gateway, prefix="/v1/sync"))
-```
-
-Your app must check who can use these routes. A gateway returns all changes in its
-configured data store. Registering tables does not separate one user's data from
-another user's data. Use separate stores or an adapter that checks data access.
-
-## Send offline data
-
-Run this inside your async app, using the `tasks` gateway shown above:
-
-```python
-import httpx
-from sync_sdk import SQLiteStore, SyncClient
-from sync_sdk.adapters.http import HTTPTransport
-
-with SQLiteStore("device.db", client_id="device-1") as local:
-    async with httpx.AsyncClient(base_url="http://localhost:8000", timeout=10) as http:
-        sync = SyncClient(local, transport=HTTPTransport(http))
-        sync.enqueue(
-            entity="tasks", entity_id="1", operation="create",
-            payload={"title": "Offline edit"}, base_version=0,
-        )
-        report = await sync.sync_once()
-        print(report, local.results())
-```
-
-`enqueue()` saves one new change. Call it once for each change your app makes.
-Do not call it again just because sending failed.
-
-`sync_once()` sends and receives a limited amount of data, then returns.
-`await sync.run()` keeps checking and sending until you cancel it.
-
-Reopen the same local file with the same client ID after a restart. The SDK keeps
-pending changes and the saved place in the server change list.
-
-Use one sync worker per local file, on the thread that opened it. Use a different
-file for each client and server data store. Your app opens and closes connections
-and chooses timeouts.
-
-You can also use `DirectTransport(gateway)` from `sync_sdk.adapters.direct` to call
-the gateway in the same process, without HTTP. `SyncClient(local, http)` still works
-as a shorter way to choose HTTP.
-
-## Data checks and row versions
-
-The table setup creates basic data checks from the columns you selected. It checks
-types, checks whether `None` is allowed, and rejects extra fields. It can fill in
-simple Python default values. Pass `schema=YourPydanticModel` to set your own checks.
-
-Send all selected fields for a create or update. A create or update adds the row
-if it is missing and changes it if it already exists.
-
-`base_version` is the row version your app last knew about. If it differs from the
-server version, the gateway returns a conflict instead of applying the change.
-If you leave it out, the default policy skips this check. Deleting a row does not
-erase its saved version.
-
-`local.results()` returns saved results: `applied`, `conflict`, or `rejected`.
-Conflicts and rejected changes are not sent again automatically. Your app decides
-how to fix them and sends a new change with a new ID.
-
-## Failed connections and saved progress
-
-Failed connections, HTTP 408/429, and server errors cause a retry. The wait grows
-after repeated failures, up to the configured limit. A small random amount helps
-clients avoid retrying at the same time. A server's `Retry-After` header can make
-the wait longer. The wait time is saved across restarts. Other errors are raised
-for your app to handle.
-
-Each sync call sends and receives at most `max_batches` groups in each direction.
-The next call continues the work.
-
-Received rows, deletes, and the saved position are written together. The local
-record view shows data received from the server. It does not show pending edits
-as if the server had already accepted them.
-
-## Monitor sync with OpenTelemetry and SigNoz
-
-Monitoring is optional. OpenTelemetry records queue size, retries, connection
-failures, mutation results, conflicts, failed writes, and sync time. SigNoz shows
-that data in charts and traces.
-
-Set up monitoring once when the client or server starts:
+Install the `observability` extra and configure OpenTelemetry once at startup:
 
 ```python
 from sync_sdk.adapters.opentelemetry import setup_signoz
 
 monitoring = setup_signoz("my-sync-service")
-```
-
-Then pass it into the pipeline:
-
-```python
 sync = SyncClient(local, transport=transport, telemetry=monitoring.telemetry)
 gateway = config.build(sessions, telemetry=monitoring.telemetry)
 ```
 
-Set `OTEL_EXPORTER_OTLP_ENDPOINT` to your SigNoz collector address. SigNoz Cloud
-also needs `OTEL_EXPORTER_OTLP_HEADERS` with its key. Call
-`monitoring.shutdown()` when the process stops.
+Set `OTEL_EXPORTER_OTLP_ENDPOINT` for the collector and call
+`monitoring.shutdown()` during application shutdown. Monitoring failures do not
+stop synchronization, and payloads or record identifiers are not used as metric
+labels. See the
+[observability guide](https://github.com/VivekReddy10-08-2004/sync-sdk/blob/master/docs/observability.md)
+for metrics, traces, SigNoz setup, and alert suggestions.
 
-Monitoring errors do not stop sync. Payloads, row IDs, mutation IDs, and client IDs
-are not used as metric labels.
+## Test and develop
 
-See the [OpenTelemetry and SigNoz guide](https://github.com/VivekReddy10-08-2004/sync-sdk/blob/master/docs/observability.md)
-for client and server setup, metric names, traces, and useful alerts.
+Run the normal suite:
 
-## What is included
+```sh
+uv sync --locked --group dev --all-extras
+uv run pytest -q
+```
 
-- A local SQLite queue and record view.
-- A SQLAlchemy adapter for your own tables. An **adapter** connects the pipeline
-  to a chosen database or way of sending data.
-- Polling capture for direct SQL writes, database-trigger side effects, and
-  cascading deletes on registered SQL tables.
-- A transactional MongoDB adapter for application-owned collections.
-- HTTP and direct calls within the same process.
-- FastAPI routes you can add to your app.
-- Rules that let developers write other storage and transport adapters.
+GitHub Actions runs the suite on Python 3.12, 3.13, and 3.14, builds and installs
+the package, and verifies live PostgreSQL, MySQL, and MongoDB adapters. The
+[testing report](https://github.com/VivekReddy10-08-2004/sync-sdk/blob/master/TESTING.md)
+records exact versions, commands, expected skips, measured results, and release
+checks.
 
-Tests use real SQLite, PostgreSQL, MySQL, and MongoDB databases. The SQL contract
-runs on the first three; the same gateway guarantees are tested on a MongoDB
-replica set.
-
-See the [setup and adapter guide](https://github.com/VivekReddy10-08-2004/sync-sdk/blob/master/docs/approach_architecture.md)
-for keys made from several columns, linked tables, custom types, and adapter rules.
-See the [MongoDB adapter guide](https://github.com/VivekReddy10-08-2004/sync-sdk/blob/master/docs/mongodb.md)
-for collection mapping, initialization, deployment requirements, and retries.
-
-## What your app still handles
-
-Your app owns login checks, data access, table changes, and how long to keep saved
-sync results.
-
-Existing rows are not sent automatically. The change-capture worker uses them as
-its initial baseline. A row with no sync history starts at sync version zero.
-
-## Run the sample server
-
-The `app/` folder is a sample server. It registers `task` and uses its sample record
-table. Your app does not need to use that table or import this folder.
-
-Update its database, then start it:
+The `app/` directory contains a sample FastAPI gateway:
 
 ```sh
 uv run --extra gateway alembic upgrade head
 uv run --extra gateway uvicorn app.main:app --reload
 ```
 
-The database update keeps existing sync results, versions, and saved positions.
+## Current scope
 
-Run the tests:
+- The host application owns authentication, authorization, tenant isolation,
+  database credentials, schema migrations, backups, and retention.
+- Existing server rows are not emitted automatically. The first SQL capture scan
+  records them as its baseline.
+- SQL change capture scans registered tables; native transaction-log CDC is not
+  included.
+- MongoDB is the ready-to-use NoSQL adapter. Its gateway writes require
+  multi-document transaction support.
+- The SDK provides at-least-once delivery attempts with idempotent server
+  processing; permanent validation or authorization errors require application
+  handling.
 
-```sh
-uv run pytest -q
-```
+For composite keys, linked tables, custom schemas, custom adapters, and metadata
+tables, see the
+[setup and adapter guide](https://github.com/VivekReddy10-08-2004/sync-sdk/blob/master/docs/approach_architecture.md).
 
-Tests cover retries, repeated sends, conflicts, table setup, linked tables, failed
-writes, restarts, and a process stopping during a write. They do not simulate a
-physical power failure.
-
-## Contributing
+## Contributing and security
 
 See [CONTRIBUTING.md](https://github.com/VivekReddy10-08-2004/sync-sdk/blob/master/CONTRIBUTING.md)
-for setup, validation, and commit sign-off requirements. Security reports should
-follow [SECURITY.md](https://github.com/VivekReddy10-08-2004/sync-sdk/blob/master/SECURITY.md).
+for development setup and DCO sign-off. Report vulnerabilities privately through
+the process in
+[SECURITY.md](https://github.com/VivekReddy10-08-2004/sync-sdk/blob/master/SECURITY.md).
 
 ## License
 
-Sync SDK is available under the [MIT License](https://github.com/VivekReddy10-08-2004/sync-sdk/blob/master/LICENSE).
+Sync SDK is available under the
+[MIT License](https://github.com/VivekReddy10-08-2004/sync-sdk/blob/master/LICENSE).
